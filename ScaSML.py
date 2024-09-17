@@ -79,7 +79,6 @@ class ScaSML(object):
         batch_size=x_t.shape[0]
         x=x_t[:,:-1]
         temp_x=temp_boundary[:,:-1]
-        self.evaluation_counter+=batch_size
         u_hat = self.GP.GPsolver(x, temp_x, GN_step=4)
         # tensor_x_t[:, -1] = self.T
         # Calculate the result of the terminal constraint function
@@ -238,7 +237,6 @@ class ScaSML(object):
             batch_size=x_t.shape[0]
             x=x_t[:,:-1]
             temp_x=temp_boundary[:,:-1]
-            self.evaluation_counter+=batch_size
             u_hat = self.GP.GPsolver(x, temp_x, GN_step=4)
             grad_u_hat_x = self.GP.compute_gradient(x, u_hat)   
             initial_value= np.concatenate((u_hat, grad_u_hat_x), axis=-1)        
@@ -321,7 +319,6 @@ class ScaSML(object):
         temp_x=temp_boundary[:,:-1]
         batch_size=x_t.shape[0]
         x=x_t[:,:-1]
-        self.evaluation_counter+=batch_size
         u_hat = self.GP.GPsolver(x, temp_x, GN_step=4)
         
         # Calculate and return the final u value
