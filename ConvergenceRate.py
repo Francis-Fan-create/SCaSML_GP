@@ -104,9 +104,14 @@ class ConvergenceRate(object):
                 x_values=xt_values[:,:-1]  # x_values: ndarray, shape: (n_samples, self.dim), dtype: float
 
                 # Measure the evaluation_number for solver1
-                sol1 = self.solver1.GPsolver(x_values, x_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
-                evaluation_number1 += xt_values.shape[0]
-                evaluation_number_list1.append(evaluation_number1)
+                if rho_==2:
+                    sol1 = self.solver1.GPsolver(x_values, x_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
+                    evaluation_number1 += xt_values.shape[0]
+                    evaluation_number_list1.append(evaluation_number1)
+                else:
+                    sol1 = self.solver1.predict(x_values)  # sol1: ndarray, shape: (num_domain,), dtype: float
+                    evaluation_number1 += xt_values.shape[0]
+                    evaluation_number_list1.append(evaluation_number1)
 
                 # Measure the evaluation_number for solver2
                 sol2 = self.solver2.u_solve(n, rho_, xt_values)  # sol2: ndarray, shape: (n_samples,), dtype: float

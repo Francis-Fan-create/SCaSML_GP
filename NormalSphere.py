@@ -112,9 +112,14 @@ class NormalSphere(object):
                 exact_sol = eq.exact_solution(xt_values)  # exact_sol: ndarray, shape: (n_samples,), dtype: float
 
                 # Measure the time for solver1
-                start = time.time()
-                sol1 = self.solver1.GPsolver(x_values, x_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
-                time1 += time.time() - start
+                if i == 0 and j == 0:
+                    start = time.time()
+                    sol1 = self.solver1.GPsolver(x_values, x_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
+                    time1 += time.time() - start
+                else:
+                    start = time.time()
+                    sol1 = self.solver1.predict(x_values)  # sol1: ndarray, shape: (n_samples,), dtype: float
+                    time1 += time.time() - start
 
                 # Measure the time for solver2
                 start = time.time()

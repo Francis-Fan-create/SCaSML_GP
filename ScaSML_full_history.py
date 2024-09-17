@@ -41,12 +41,10 @@ class ScaSML_full_history(object):
             ndarray: The output of the generator function of shape (batch_size,).
         '''
         eq = self.equation
-        _, temp_boundary = eq.generate_data(1, 20)
         batch_size=x_t.shape[0]
         x=x_t[:,:-1]
-        temp_x=temp_boundary[:,:-1]
         self.evaluation_counter+=batch_size
-        u_hat = self.GP.GPsolver(x, temp_x, GN_step=4)
+        u_hat = self.GP.predict(x)
         grad_u_hat_x = self.GP.compute_gradient(x, u_hat)
         # Calculate the values for the generator function
         '''TO DO: should we multiply z_breve with sigma(x_t) or not?'''
@@ -74,11 +72,9 @@ class ScaSML_full_history(object):
         eq = self.equation
         batch_size=x_t.shape[0]
         self.evaluation_counter+=batch_size
-        _, temp_boundary = eq.generate_data(1, 20)
         batch_size=x_t.shape[0]
         x=x_t[:,:-1]
-        temp_x=temp_boundary[:,:-1]
-        u_hat = self.GP.GPsolver(x, temp_x, GN_step=4)
+        u_hat = self.GP.predict(x)
         # tensor_x_t[:, -1] = self.T
         # Calculate the result of the terminal constraint function
         result = eq.g(x_t) - u_hat[:, 0]
@@ -177,8 +173,7 @@ class ScaSML_full_history(object):
             _, temp_boundary = eq.generate_data(1, 200)
             batch_size=x_t.shape[0]
             x=x_t[:,:-1]
-            temp_x=temp_boundary[:,:-1]
-            u_hat = self.GP.GPsolver(x, temp_x, GN_step=4)
+            u_hat = self.GP.predict(x)
             grad_u_hat_x = self.GP.compute_gradient(x, u_hat)   
             initial_value= np.concatenate((u_hat, grad_u_hat_x), axis=-1)        
             return np.concatenate((u, z), axis=-1)+initial_value 
@@ -244,11 +239,9 @@ class ScaSML_full_history(object):
         u_breve_z_breve = self.uz_solve(n, rho, x_t)
         u_breve, z_breve = u_breve_z_breve[:, 0], u_breve_z_breve[:, 1:]
         
-        _, temp_boundary = eq.generate_data(1, 20)
         batch_size=x_t.shape[0]
         x=x_t[:,:-1]
-        temp_x=temp_boundary[:,:-1]
-        u_hat = self.GP.GPsolver(x, temp_x, GN_step=4)
+        u_hat = self.GP.predict(x)
         
         # Calculate and return the final u value
         u = u_breve + u_hat

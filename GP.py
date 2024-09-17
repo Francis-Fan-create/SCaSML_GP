@@ -275,27 +275,49 @@ class GP(object):
             rhs = rhs_f + self.alpha * (eq.m - 1) * (sol ** eq.m)
             rhs = np.concatenate((rhs, bdy_g), axis=0)
             sol = Theta_test @ (np.linalg.solve(Theta_train + nugget * np.diag(np.diag(Theta_train)), rhs))
-        
+        self.sol = sol
+        self.X_domain = X_domain
+        self.X_boundary = X_boundary
+        self.right_op = np.linalg.solve(Theta_train + nugget * np.diag(np.diag(Theta_train)), rhs)
         return sol
     
-    def compute_gradient(self, X_domain, sol):
+    def predict(self, X_infer):
+        """
+        Predict the solution at the given inference points.
+
+        Args:
+            X_infer (np.ndarray): Coordinates of the inference points, shape (N_infer, d).
+
+        Returns:
+            np.ndarray: Predicted solution at the inference points, shape (N_infer,).
+        """
+        N_domain, d = np.shape(self.X_domain)
+        sol = self.sol
+        sigma = self.sigma
+        w1 = -np.ones((N_domain, 1))
+        w0 = self.alpha * self.equation.m * (sol ** (self.equation.m - 1))
+        Theta_test = self.assembly_Theta_value_predict(X_infer, self.X_domain, self.X_boundary, w0, w1, sigma)
+        new_sol = Theta_test @ self.right_op
+        return new_sol
+    
+    def compute_gradient(self, X_infer, sol):
         """
         Compute the gradient of the solution with respect to the input data.
 
         Args:
-            X_domain (np.ndarray): Coordinates of the domain points, shape (N_domain, d).
-            sol (np.ndarray): Solution after Gauss-Newton iterations, shape (N_domain,).
+            X_infer (np.ndarray): Coordinates of the infer points, shape (N_infer, d).
+            sol (np.ndarray): Solution after Gauss-Newton iterations, shape (N_infer,).
 
         Returns:
-            np.ndarray: Gradient of the solution with respect to the input data, shape (N_domain, d).
+            np.ndarray: Gradient of the solution with respect to the input data, shape (N_infer, d).
         """
         sigma = self.sigma
-        N_domain, d = np.shape(X_domain)
-        # Compute the derivative of the solution with respect to X_domain
-        sol_derivative = np.zeros((N_domain, d))
-        for i in range(N_domain):
-            for j in range(N_domain):
-                sol_derivative[i] += self.kappa_derivative(X_domain[i], X_domain[j], sigma) * sol[j]
+        N_infer, d = np.shape(X_infer)
+        # Compute the derivative of the solution with respect to X_infer
+        sol_derivative = np.zeros((N_infer, d))
+        for i in range(N_infer):
+            for j in range(N_infer):
+                sol_derivative[i] += self.kappa_derivative(X_infer[i], X_infer[j], sigma) * sol[j]
         
         return sol_derivative
 
