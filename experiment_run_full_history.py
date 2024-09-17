@@ -5,10 +5,10 @@
 # import the required libraries
 from equations import GP_Example
 from GP import GP
-from MLP import MLP
-from ScaSML import ScaSML
-# from MLP_full_history import MLP_full_history as MLP
-# from ScaSML_full_history import ScaSML_full_history as ScaSML
+# from MLP import MLP
+# from ScaSML import ScaSML
+from MLP_full_history import MLP_full_history as MLP
+from ScaSML_full_history import ScaSML_full_history as ScaSML
 from NormalSphere import NormalSphere
 from SimpleUniform import SimpleUniform
 from ConvergenceRate import ConvergenceRate
@@ -49,13 +49,13 @@ solver3=ScaSML(equation=equation,GP=solver1) #ScaSML object
 
 #run the test for NormalSphere
 test1=NormalSphere(equation,solver1,solver2,solver3)
-rhomax=test1.test(r"results/GP_Example/100d")
+rhomax=test1.test(r"results_full_history/GP_Example/100d")
 #run the test for SimpleUniform
 test2=SimpleUniform(equation,solver1,solver2,solver3)
-test2.test(r"results/GP_Example/100d")
+test2.test(r"results_full_history/GP_Example/100d")
 #run the test for ConvergenceRate
 test3=ConvergenceRate(equation,solver1,solver2,solver3)
-test3.test(r"results/GP_Example/100d")
+test3.test(r"results_full_history/GP_Example/100d")
 
 
 #finish wandb
