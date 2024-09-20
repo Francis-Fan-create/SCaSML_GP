@@ -1,8 +1,7 @@
 import deepxde as dde
 # import numpy as np
 import torch
-import autograd.numpy as np
-from autograd import grad, jacobian, hessian
+import numpy as np
 
 import sys
 import os
