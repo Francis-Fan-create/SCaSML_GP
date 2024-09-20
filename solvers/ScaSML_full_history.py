@@ -44,7 +44,7 @@ class ScaSML_full_history(object):
         batch_size=x_t.shape[0]
         self.evaluation_counter+=batch_size
         u_hat = self.GP.predict(x_t)
-        grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)
+        grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:,:-1]
         # Calculate the values for the generator function
         '''TO DO: should we multiply z_breve with sigma(x_t) or not?'''
         '''Personally, I think we should, since the W in the algorithm is not multiplied by sigma.'''
@@ -170,9 +170,8 @@ class ScaSML_full_history(object):
         if n == 0:
             _, temp_boundary = eq.generate_data(1, 200)
             batch_size=x_t.shape[0]
-            x=x_t[:,:-1]
-            u_hat = self.GP.predict(x)
-            grad_u_hat_x = self.GP.compute_gradient(x, u_hat)   
+            u_hat = self.GP.predict(x_t)
+            grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:, :-1]   
             initial_value= np.concatenate((u_hat, grad_u_hat_x), axis=-1)        
             return np.concatenate((u, z), axis=-1)+initial_value 
         elif n < 0:

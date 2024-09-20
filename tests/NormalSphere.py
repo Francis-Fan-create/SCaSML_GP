@@ -113,7 +113,7 @@ class NormalSphere(object):
                 # Measure the time for solver1
                 if i == 0 and j == 0:
                     start = time.time()
-                    sol1 = self.solver1.GPsolver(xt_values, data_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
+                    sol1 = self.solver1.GPsolver(xt_values, data_boundary, GN_step=2)  # sol1: ndarray, shape: (num_domain,), dtype: float
                     time1 += time.time() - start
                 else:
                     start = time.time()

@@ -273,19 +273,20 @@ class GP(object):
         nugget = self.nugget
         bdy_g = eq.g(x_t_boundary)[:, np.newaxis]
         tensor_bdy_g= torch.tensor(bdy_g, dtype=torch.float32)
-        tensor_x_t_domain = torch.tensor(x_t_domain, dtype=torch.float32,requires_grad=True)
         tensor_x_t_boundary = torch.tensor(x_t_boundary, dtype=torch.float32,requires_grad=True)
         
         for i in range(GN_step):
-            rhs_f = eq.f(x_t_domain,sol,self.compute_gradient(x_t_domain,sol))
+            rhs_f = eq.f(x_t_domain,sol,self.compute_gradient(x_t_domain,sol)[:,:-1])
             tensor_rhs_f = torch.tensor(rhs_f, dtype=torch.float32)
             tensor_w1 = -torch.ones((N_domain, 1), dtype=torch.float32)
             if i == 0:
                 tensor_PDE_grad = torch.randn(N_domain,1,dtype=torch.float32)
             else:
-                g_loss = eq.gPDE_loss(tensor_x_t_domain, tensor_sol)[:-1]
+                g_loss = eq.gPDE_loss(tensor_x_t_domain, tensor_sol)[:-1] 
+                '''cuda out of memory error occurs when using the line above'''
                 tensor_PDE_grad = torch.sum(torch.cat(g_loss,dim=1),dim=1,keepdim=True)
             tensor_w0 = self.alpha * tensor_PDE_grad
+            tensor_x_t_domain = torch.tensor(x_t_domain, dtype=torch.float32,requires_grad=True)
             Theta_train = self.assembly_Theta(tensor_x_t_domain, tensor_x_t_boundary, tensor_w0, tensor_w1, sigma)
             Theta_test = self.assembly_Theta_value_predict(tensor_x_t_domain, tensor_x_t_domain, tensor_x_t_boundary, tensor_w0, tensor_w1, sigma)
             tensor_rhs= tensor_rhs_f + self.alpha * tensor_PDE_grad * tensor_sol
@@ -319,7 +320,8 @@ class GP(object):
         w0 = self.w0
         tensor_w0 = torch.tensor(w0, dtype=torch.float32)
         Theta_test = self.assembly_Theta_value_predict(tensor_x_t_infer, tensor_x_t_domain, tensor_x_t_boundary, tensor_w0, tensor_w1, sigma)
-        new_sol = Theta_test @ self.right_op
+        new_sol = (Theta_test @ self.right_op).cpu().detach().numpy()
+        
         return new_sol
     
     def compute_gradient(self, x_t_infer, sol):

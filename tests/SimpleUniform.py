@@ -86,7 +86,7 @@ class SimpleUniform(object):
         start = time.time()
         xt_domain = data_domain[:, :self.dim+1]  # x_domain: ndarray, shape: (num_domain, dim+1), dtype: float
         xt_boundary = data_boundary[:, :self.dim+1]  # x_t_boundary: ndarray, shape: (num_boundary, dim+1), dtype: float
-        sol1 = self.solver1.GPsolver(xt_domain, xt_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
+        sol1 = self.solver1.GPsolver(xt_domain, xt_boundary, GN_step=2)  # sol1: ndarray, shape: (num_domain,), dtype: float
         time1 += time.time() - start
 
         # Measure the time for solver2
