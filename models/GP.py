@@ -291,7 +291,7 @@ class GP(object):
             Theta_test = self.assembly_Theta_value_predict(tensor_x_t_domain, tensor_x_t_domain, tensor_x_t_boundary, tensor_w0, tensor_w1, sigma)
             tensor_rhs= tensor_rhs_f + self.alpha * tensor_PDE_grad * tensor_sol
             tensor_rhs = torch.cat((tensor_rhs, tensor_bdy_g), dim=0)
-            tensor_sol = Theta_test @ (torch.linalg.solve(Theta_train + nugget * torch.diag(torch.diag(Theta_train)), tensor_rhs))
+            tensor_sol = torch.matmul(Theta_test,(torch.linalg.solve(Theta_train + nugget * torch.diag(torch.diag(Theta_train)), tensor_rhs)))
             sol = tensor_sol.cpu().detach().numpy()
         self.sol = sol
         self.x_t_domain = x_t_domain
@@ -320,7 +320,8 @@ class GP(object):
         w0 = self.w0
         tensor_w0 = torch.tensor(w0, dtype=torch.float32)
         Theta_test = self.assembly_Theta_value_predict(tensor_x_t_infer, tensor_x_t_domain, tensor_x_t_boundary, tensor_w0, tensor_w1, sigma)
-        new_sol = (Theta_test @ self.right_op).cpu().detach().numpy()
+        tensor_right_op = torch.tensor(self.right_op,dtype=torch.float32)
+        new_sol = (torch.matmul(Theta_test,tensor_right_op)).cpu().detach().numpy()
         
         return new_sol
     
