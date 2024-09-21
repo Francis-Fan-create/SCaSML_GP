@@ -12,7 +12,7 @@ from tests.SimpleUniform import SimpleUniform
 from tests.ConvergenceRate import ConvergenceRate
 from solvers.MLP import MLP
 from solvers.ScaSML import ScaSML
-from models.GP import GP
+from models.GP import GP_Complicated_HJB as GP
 import numpy as np
 import torch
 import wandb
