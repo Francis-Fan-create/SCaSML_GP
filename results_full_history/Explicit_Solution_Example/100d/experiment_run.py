@@ -10,6 +10,7 @@ from equations.equations import Explicit_Solution_Example
 from tests.NormalSphere import NormalSphere
 from tests.SimpleUniform import SimpleUniform
 from tests.ConvergenceRate import ConvergenceRate
+from tests.GPRate import GPRate
 from solvers.MLP_full_history import MLP_full_history
 from solvers.ScaSML_full_history import ScaSML_full_history
 from models.GP import GP_Explicit_Solution_Example as GP
@@ -48,15 +49,18 @@ solver2=MLP_full_history(equation=equation) #Multilevel Picard object
 solver3=ScaSML_full_history(equation=equation,GP=solver1) #ScaSML object
 
 
-#run the test for NormalSphere
-test1=NormalSphere(equation,solver1,solver2,solver3)
-rhomax=test1.test(r"results_full_history/Explicit_Solution_Example/100d")
-#run the test for SimpleUniform
-test2=SimpleUniform(equation,solver1,solver2,solver3)
-test2.test(r"results_full_history/Explicit_Solution_Example/100d")
-#run the test for ConvergenceRate
-test3=ConvergenceRate(equation,solver1,solver2,solver3)
-test3.test(r"results_full_history/Explicit_Solution_Example/100d")
+# #run the test for NormalSphere
+# test1=NormalSphere(equation,solver1,solver2,solver3)
+# rhomax=test1.test(r"results_full_history/Explicit_Solution_Example/100d")
+# #run the test for SimpleUniform
+# test2=SimpleUniform(equation,solver1,solver2,solver3)
+# test2.test(r"results_full_history/Explicit_Solution_Example/100d")
+# #run the test for ConvergenceRate
+# test3=ConvergenceRate(equation,solver1,solver2,solver3)
+# test3.test(r"results_full_history/Explicit_Solution_Example/100d")
+#run the test for GPRate
+test4=GPRate(equation,solver1)
+test4.test(r"results_full_history/Explicit_Solution_Example/100d")
 
 
 #finish wandb
