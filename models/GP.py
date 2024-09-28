@@ -264,7 +264,7 @@ class GP(object):
         z = np.random.randn(3*N_domain+N_boundary, 1)
         sol = np.random.randn(N_domain,1)
         w0 = np.ones((N_domain,1))
-        w1 = np.random.randn(3*N_domain+N_boundary, 1)
+        w1 = np.ones((3*N_domain+N_boundary, 1))
         for i in range(GN_step):
             kernel_phi_phi = self.kernel_phi_phi(x_t_domain, x_t_boundary, w0, w1)  # Kernel matrix between z and z
             kernel_x_phi = self.kernel_x_t_phi(x_t_domain, x_t_domain, x_t_boundary, w0, w1) # Kernel matrix between x_t_domain and z
@@ -317,7 +317,7 @@ class GP_Complicated_HJB(GP):
         z_domain = z[:3*N_domain]
         dP = np.zeros_like(z_domain)
         dP[:N_domain] = z[:N_domain]
-        dP[N_domain:2*N_domain] = z[N_domain:2*N_domain]*(1/d)
+        dP[N_domain:2*N_domain] = z[N_domain:2*N_domain]*(-1/d)
         dP[2*N_domain:3*N_domain] = z[2*N_domain:3*N_domain]
         return dP
     
