@@ -55,12 +55,12 @@ solver3=ScaSML_full_history(equation=equation,GP=solver1) #ScaSML object
 # #run the test for SimpleUniform
 # test2=SimpleUniform(equation,solver1,solver2,solver3)
 # test2.test(r"results_full_history/Complicated_HJB/100d")
-# #run the test for ConvergenceRate
-# test3=ConvergenceRate(equation,solver1,solver2,solver3)
-# test3.test(r"results_full_history/Complicated_HJB/100d")
-#run the test for GPRate
-test4=GPRate(equation,solver1)
-test4.test(r"results_full_history/Complicated_HJB/100d")
+#run the test for ConvergenceRate
+test3=ConvergenceRate(equation,solver1,solver2,solver3)
+test3.test(r"results_full_history/Complicated_HJB/100d")
+# #run the test for GPRate
+# test4=GPRate(equation,solver1)
+# test4.test(r"results_full_history/Complicated_HJB/100d")
 
 
 #finish wandb

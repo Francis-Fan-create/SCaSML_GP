@@ -41,8 +41,9 @@ class ScaSML_full_history(object):
             ndarray: The output of the generator function of shape (batch_size,).
         '''
         eq = self.equation
-        batch_size=x_t.shape[0]
-        self.evaluation_counter+=batch_size
+        # batch_size=x_t.shape[0]
+        # self.evaluation_counter+=batch_size
+        self.evaluation_counter+=1
         u_hat = self.GP.predict(x_t)
         grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:,:-1]
         # Calculate the values for the generator function
@@ -69,9 +70,9 @@ class ScaSML_full_history(object):
             ndarray: The output of the terminal constraint function of shape (batch_size,).
         '''
         eq = self.equation
-        batch_size=x_t.shape[0]
-        self.evaluation_counter+=batch_size
-        batch_size=x_t.shape[0]
+        # batch_size=x_t.shape[0]
+        # self.evaluation_counter+=batch_size
+        self.evaluation_counter+=1
         u_hat = self.GP.predict(x_t)
         # tensor_x_t[:, -1] = self.T
         # Calculate the result of the terminal constraint function
