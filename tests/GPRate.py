@@ -76,7 +76,7 @@ class GPRate(object):
 
                 # Measure the evaluation_number for solver1
                 if index == 0:
-                    sol1 = self.solver1.GPsolver(xt_values, data_boundary, GN_step=2)  # sol1: ndarray, shape: (num_domain,), dtype: float
+                    sol1 = self.solver1.GPsolver(xt_values, data_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
                 else:
                     sol1 = self.solver1.predict(xt_values)  # sol1: ndarray, shape: (num_domain,), dtype: float
 

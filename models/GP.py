@@ -18,7 +18,7 @@ class GP(object):
         self.n_output = equation.n_output  # Number of output features
         self.d= self.n_input-1 # Number of spatial dimensions
         self.sigma= equation.sigma() # Standard deviation 
-        self.nugget = 1e-5  # Regularization parameter to ensure numerical stability
+        self.nugget = 1e-10  # Regularization parameter to ensure numerical stability
     
     def kappa(self,x_t,y_t):
         '''Compute the kernel matrix K(x_t,y_t)'''
@@ -132,106 +132,110 @@ class GP(object):
         sigma = self.sigma
         return (d*(d+2)/sigma**4-2*(d+2)*dist2/sigma**6+dist2**2/sigma**8)*kappa
     
-    def kernel_phi_phi(self, x_t_domain, x_t_boundary, w0, w1):
+    def kernel_phi_phi(self, x_t_domain, x_t_boundary):
         '''Compute the kernel matrix K(phi,phi)'''
         N_domain = x_t_domain.shape[0]
         N_boundary = x_t_boundary.shape[0]
-        phi_dim = N_domain*3+N_boundary
+        phi_dim = N_domain*4+N_boundary
         kernel_phi_phi = np.zeros((phi_dim, phi_dim))
-        w0_domain = w0
-        w1_domain = w1[:N_domain]
-        w0_boundary = np.ones((N_boundary,1))
-        w1_boundary = w1[3*N_domain:]
-        repeated_w0_domain = np.repeat(w0_domain, 3,axis=0).reshape(-1,1)
-        repeated_w1_domain = np.repeat(w1_domain, 3,axis=0).reshape(-1,1)
-        full_w0 = np.concatenate((repeated_w0_domain, w0_boundary), axis=0)
-        full_w1 = np.concatenate((repeated_w1_domain, w1_boundary), axis=0)
-        weight_matrix = np.matmul(full_w0, full_w1.T)
         for i in range(N_domain):
             for j in range(N_domain):
-                kernel_phi_phi[i, j] = self.dt_x_t_dt_y_t_kappa(x_t_domain[i], x_t_domain[j])
+                kernel_phi_phi[i, j] = self.kappa(x_t_domain[i], x_t_domain[j])
             for j in range(N_domain, 2*N_domain):
-                kernel_phi_phi[i, j] = self.dt_x_t_div_y_kappa(x_t_domain[i], x_t_domain[j-N_domain])
+                kernel_phi_phi[i, j] = self.dt_y_t_kappa(x_t_domain[i], x_t_domain[j-N_domain])
             for j in range(2*N_domain, 3*N_domain):
-                kernel_phi_phi[i, j] = self.dt_x_t_laplacian_y_t_kappa(x_t_domain[i], x_t_domain[j-2*N_domain])
-            for j in range(3*N_domain, 3*N_domain+N_boundary):
-                kernel_phi_phi[i, j] = self.dt_x_t_kappa(x_t_domain[i], x_t_boundary[j-3*N_domain])
+                kernel_phi_phi[i, j] = self.div_y_kappa(x_t_domain[i], x_t_domain[j-2*N_domain])
+            for j in range(3*N_domain, 4*N_domain):
+                kernel_phi_phi[i, j] = self.laplacian_y_t_kappa(x_t_domain[i], x_t_domain[j-3*N_domain])
+            for j in range(4*N_domain, 4*N_domain+N_boundary):
+                kernel_phi_phi[i, j] = self.kappa(x_t_domain[i], x_t_boundary[j-4*N_domain])
         for i in range(N_domain, 2*N_domain):
             for j in range(N_domain):
-                kernel_phi_phi[i, j] = self.div_x_dt_y_t_kappa(x_t_domain[i-N_domain], x_t_domain[j])
+                kernel_phi_phi[i, j] = self.dt_x_t_kappa(x_t_domain[i-N_domain], x_t_domain[j])
             for j in range(N_domain, 2*N_domain):
-                kernel_phi_phi[i, j] = self.div_x_div_y_kappa(x_t_domain[i-N_domain], x_t_domain[j-N_domain])
+                kernel_phi_phi[i, j] = self.dt_x_t_dt_y_t_kappa(x_t_domain[i-N_domain], x_t_domain[j-N_domain])
             for j in range(2*N_domain, 3*N_domain):
-                kernel_phi_phi[i, j] = self.div_x_laplacian_y_t_kappa(x_t_domain[i-N_domain], x_t_domain[j-2*N_domain])
-            for j in range(3*N_domain, 3*N_domain+N_boundary):
-                kernel_phi_phi[i, j] = self.div_x_kappa(x_t_domain[i-N_domain], x_t_boundary[j-3*N_domain])
+                kernel_phi_phi[i, j] = self.dt_x_t_div_y_kappa(x_t_domain[i-N_domain], x_t_domain[j-2*N_domain])
+            for j in range(3*N_domain, 4*N_domain):
+                kernel_phi_phi[i, j] = self.dt_x_t_laplacian_y_t_kappa(x_t_domain[i-N_domain], x_t_domain[j-3*N_domain])
+            for j in range(4*N_domain, 4*N_domain+N_boundary):
+                kernel_phi_phi[i, j] = self.dt_x_t_kappa(x_t_domain[i-N_domain], x_t_boundary[j-4*N_domain])
         for i in range(2*N_domain, 3*N_domain):
             for j in range(N_domain):
-                kernel_phi_phi[i, j] = self.laplacian_x_t_dt_y_t_kappa(x_t_domain[i-2*N_domain], x_t_domain[j])
+                kernel_phi_phi[i, j] = self.div_x_kappa(x_t_domain[i-2*N_domain], x_t_domain[j])
             for j in range(N_domain, 2*N_domain):
-                kernel_phi_phi[i, j] = self.laplacian_x_t_div_y_kappa(x_t_domain[i-2*N_domain], x_t_domain[j-N_domain])
+                kernel_phi_phi[i, j] = self.div_x_dt_y_t_kappa(x_t_domain[i-2*N_domain], x_t_domain[j-N_domain])
             for j in range(2*N_domain, 3*N_domain):
-                kernel_phi_phi[i, j] = self.laplacian_x_t_laplacian_y_t_kappa(x_t_domain[i-2*N_domain], x_t_domain[j-2*N_domain])
-            for j in range(3*N_domain, 3*N_domain+N_boundary):
-                kernel_phi_phi[i, j] = self.laplacian_x_t_kappa(x_t_domain[i-2*N_domain], x_t_boundary[j-3*N_domain])
-        for i in range(3*N_domain, 3*N_domain+N_boundary):
+                kernel_phi_phi[i, j] = self.div_x_div_y_kappa(x_t_domain[i-2*N_domain], x_t_domain[j-2*N_domain])
+            for j in range(3*N_domain, 4*N_domain):
+                kernel_phi_phi[i, j] = self.div_x_laplacian_y_t_kappa(x_t_domain[i-2*N_domain], x_t_domain[j-3*N_domain])
+            for j in range(4*N_domain, 4*N_domain+N_boundary):
+                kernel_phi_phi[i, j] = self.div_x_kappa(x_t_domain[i-2*N_domain], x_t_boundary[j-4*N_domain])
+        for i in range(3*N_domain, 4*N_domain):
             for j in range(N_domain):
-                kernel_phi_phi[i, j] = self.dt_y_t_kappa(x_t_boundary[i-3*N_domain], x_t_domain[j])
+                kernel_phi_phi[i, j] = self.laplacian_x_t_kappa(x_t_domain[i-3*N_domain], x_t_domain[j])
             for j in range(N_domain, 2*N_domain):
-                kernel_phi_phi[i, j] = self.div_y_kappa(x_t_boundary[i-3*N_domain], x_t_domain[j-N_domain])
+                kernel_phi_phi[i, j] = self.laplacian_x_t_dt_y_t_kappa(x_t_domain[i-3*N_domain], x_t_domain[j-N_domain])
             for j in range(2*N_domain, 3*N_domain):
-                kernel_phi_phi[i, j] = self.laplacian_y_t_kappa(x_t_boundary[i-3*N_domain], x_t_domain[j-2*N_domain])
-            for j in range(3*N_domain, 3*N_domain+N_boundary):
-                kernel_phi_phi[i, j] = self.kappa(x_t_boundary[i-3*N_domain], x_t_boundary[j-3*N_domain])
-        return kernel_phi_phi*weight_matrix
+                kernel_phi_phi[i, j] = self.laplacian_x_t_div_y_kappa(x_t_domain[i-3*N_domain], x_t_domain[j-2*N_domain])
+            for j in range(3*N_domain, 4*N_domain):
+                kernel_phi_phi[i, j] = self.laplacian_x_t_laplacian_y_t_kappa(x_t_domain[i-3*N_domain], x_t_domain[j-3*N_domain])
+            for j in range(4*N_domain, 4*N_domain+N_boundary):
+                kernel_phi_phi[i, j] = self.laplacian_x_t_kappa(x_t_domain[i-3*N_domain], x_t_boundary[j-4*N_domain])
+        for i in range(4*N_domain, 4*N_domain+N_boundary):
+            for j in range(N_domain):
+                kernel_phi_phi[i, j] = self.kappa(x_t_boundary[i-4*N_domain], x_t_domain[j])
+            for j in range(N_domain, 2*N_domain):
+                kernel_phi_phi[i, j] = self.dt_y_t_kappa(x_t_boundary[i-4*N_domain], x_t_domain[j-N_domain])
+            for j in range(2*N_domain, 3*N_domain):
+                kernel_phi_phi[i, j] = self.div_y_kappa(x_t_boundary[i-4*N_domain], x_t_domain[j-2*N_domain])
+            for j in range(3*N_domain, 4*N_domain):
+                kernel_phi_phi[i, j] = self.laplacian_y_t_kappa(x_t_boundary[i-4*N_domain], x_t_domain[j-3*N_domain])
+            for j in range(4*N_domain, 4*N_domain+N_boundary):
+                kernel_phi_phi[i, j] = self.kappa(x_t_boundary[i-4*N_domain], x_t_boundary[j-4*N_domain])
+        return kernel_phi_phi
     
-    def kernel_x_t_phi(self, x_t_infer, x_t_domain, x_t_boundary, w0, w1):
+    def kernel_x_t_phi(self, x_t_infer, x_t_domain, x_t_boundary):
         '''Compute the kernel matrix K(x_t,phi)'''
         N_infer = x_t_infer.shape[0]
         N_domain = x_t_domain.shape[0]
         N_boundary = x_t_boundary.shape[0]
         row_dim = N_infer
-        col_dim = N_domain*3+N_boundary
+        col_dim = N_domain*4+N_boundary
         kernel_x_phi = np.zeros((row_dim, col_dim))
-        full_w0 = w0
-        w1_domain = w1[:N_domain]
-        w1_boundary = w1[3*N_domain:]
-        full_w1 = np.concatenate((np.repeat(w1_domain, 3).reshape(-1,1), w1_boundary), axis=0)
-        weights_matrix = np.matmul(full_w0, full_w1.T)
         for i in range(N_infer):
             for j in range(N_domain):
-                kernel_x_phi[i, j] = self.dt_y_t_kappa(x_t_infer[i], x_t_domain[j])
+                kernel_x_phi[i, j] = self.kappa(x_t_infer[i], x_t_domain[j])
             for j in range(N_domain, 2*N_domain):
-                kernel_x_phi[i, j] = self.div_y_kappa(x_t_infer[i], x_t_domain[j-N_domain])
+                kernel_x_phi[i, j] = self.dt_y_t_kappa(x_t_infer[i], x_t_domain[j-N_domain])
             for j in range(2*N_domain, 3*N_domain):
-                kernel_x_phi[i, j] = self.laplacian_y_t_kappa(x_t_infer[i], x_t_domain[j-2*N_domain])
-            for j in range(3*N_domain, 3*N_domain+N_boundary):
-                kernel_x_phi[i, j] = self.kappa(x_t_infer[i], x_t_boundary[j-3*N_domain])
-        return kernel_x_phi*weights_matrix
+                kernel_x_phi[i, j] = self.div_y_kappa(x_t_infer[i], x_t_domain[j-2*N_domain])
+            for j in range(3*N_domain, 4*N_domain):
+                kernel_x_phi[i, j] = self.laplacian_y_t_kappa(x_t_infer[i], x_t_domain[j-3*N_domain])
+            for j in range(4*N_domain, 4*N_domain+N_boundary):
+                kernel_x_phi[i, j] = self.kappa(x_t_infer[i], x_t_boundary[j-4*N_domain])
+        return kernel_x_phi
     
-    def dx_t_kernel_x_t_phi(self, x_t_infer, x_t_domain, x_t_boundary, w0, w1):
+    def dx_t_kernel_x_t_phi(self, x_t_infer, x_t_domain, x_t_boundary):
         '''Compute the gradient of the kernel matrix K(x_t,phi) with respect to x_t'''
         N_infer = x_t_infer.shape[0]
         N_domain = x_t_domain.shape[0]
         N_boundary = x_t_boundary.shape[0]
         row_dim = N_infer
-        col_dim = N_domain*3+N_boundary
+        col_dim = N_domain*4+N_boundary
         dx_t_kernel_x_phi = np.zeros((row_dim, col_dim, self.n_input))
-        full_w0 = w0
-        w1_domain = w1[:N_domain]
-        w1_boundary = w1[3*N_domain:]
-        full_w1 = np.concatenate((np.repeat(w1_domain, 3).reshape(-1,1), w1_boundary), axis=0)
-        weights_matrix = np.matmul(full_w0, full_w1.T)
         for i in range(N_infer):
             for j in range(N_domain):
-                dx_t_kernel_x_phi[i, j] = self.dt_y_t_kappa(x_t_infer[i], x_t_domain[j])*(x_t_infer[i]-x_t_domain[j])/self.sigma**2
+                dx_t_kernel_x_phi[i, j] = self.kappa(x_t_infer[i], x_t_domain[j])*(x_t_infer[i]-x_t_domain[j])/self.sigma**2
             for j in range(N_domain, 2*N_domain):
-                dx_t_kernel_x_phi[i, j] = self.div_y_kappa(x_t_infer[i], x_t_domain[j-N_domain])*(x_t_infer[i]-x_t_domain[j-N_domain])/self.sigma**2
+                dx_t_kernel_x_phi[i, j] = self.dt_y_t_kappa(x_t_infer[i], x_t_domain[j-N_domain])*(x_t_infer[i]-x_t_domain[j-N_domain])/self.sigma**2
             for j in range(2*N_domain, 3*N_domain):
-                dx_t_kernel_x_phi[i, j] = self.laplacian_y_t_kappa(x_t_infer[i], x_t_domain[j-2*N_domain])*(x_t_infer[i]-x_t_domain[j-2*N_domain])/self.sigma**2
-            for j in range(3*N_domain, 3*N_domain+N_boundary):
-                dx_t_kernel_x_phi[i, j] = self.kappa(x_t_infer[i], x_t_boundary[j-3*N_domain])*(x_t_infer[i]-x_t_boundary[j-3*N_domain])/self.sigma**2
-        return dx_t_kernel_x_phi*weights_matrix[:, :, np.newaxis]
+                dx_t_kernel_x_phi[i, j] = self.div_y_kappa(x_t_infer[i], x_t_domain[j-2*N_domain])*(x_t_infer[i]-x_t_domain[j-2*N_domain])/self.sigma**2
+            for j in range(3*N_domain, 4*N_domain):
+                dx_t_kernel_x_phi[i, j] = self.laplacian_y_t_kappa(x_t_infer[i], x_t_domain[j-3*N_domain])*(x_t_infer[i]-x_t_domain[j-3*N_domain])/self.sigma**2
+            for j in range(4*N_domain, 4*N_domain+N_boundary):
+                dx_t_kernel_x_phi[i, j] = self.kappa(x_t_infer[i], x_t_boundary[j-4*N_domain])*(x_t_infer[i]-x_t_boundary[j-4*N_domain])/self.sigma**2
+        return dx_t_kernel_x_phi
     
     def f(self,x_t):
         '''Compute the nonlinear term on the right at x_t'''
@@ -240,6 +244,10 @@ class GP(object):
     def g(self,x_t):
         '''Compute the terminal condition at x_t'''
         return self.equation.g(x_t)[:,np.newaxis]
+    
+    def P(self,z):
+        '''Compute the value of operator P at z'''
+        return NotImplementedError
     
     def dP(self,z):
         '''Compute the value of the derivative of operator P at z'''
@@ -255,47 +263,42 @@ class GP(object):
             GN_step (int, optional): Number of Gauss-Newton iterations. Default is 4.
 
         Returns:
-            np.ndarray: Solution after Gauss-Newton iterations on x_t_domain, shape (N_domain,).
+            np.ndarray: Solution after Gauss-Newton iterations on x_t_domain, shape (N_domain,1).
         """
         N_domain = x_t_domain.shape[0]
         N_boundary = x_t_boundary.shape[0]
         self.x_t_domain = x_t_domain
         self.x_t_boundary = x_t_boundary
-        z = np.random.randn(3*N_domain+N_boundary, 1)
-        sol = np.random.randn(N_domain,1)
-        w0 = np.ones((N_domain,1))
-        w1 = np.ones((3*N_domain+N_boundary, 1))
+        z = np.random.randn(4*N_domain+N_boundary, 1)
+        sol_domain = np.random.randn(N_domain,1)
+        sol_boundary = np.random.randn(N_boundary,1)
+        sol = np.concatenate((sol_domain, sol_boundary), axis=0) 
+        kernel_phi_phi = self.kernel_phi_phi(x_t_domain, x_t_boundary)  # Kernel matrix between z and z
+        kernel_x_phi = self.kernel_x_t_phi(np.concatenate((x_t_domain,x_t_boundary),axis=0), x_t_domain, x_t_boundary) # Kernel matrix between x_t_domain and z
+        # Compute the Moore-Penrose pseudoinverse of kernel_phi_phi
+        U, S, Vt = np.linalg.svd(kernel_phi_phi)
+        S_inv = np.diag(1 / S)
+        kernel_phi_phi_inv = Vt.T @ S_inv @ U.T
         for i in range(GN_step):
-            kernel_phi_phi = self.kernel_phi_phi(x_t_domain, x_t_boundary, w0, w1)  # Kernel matrix between z and z
-            kernel_x_phi = self.kernel_x_t_phi(x_t_domain, x_t_domain, x_t_boundary, w0, w1) # Kernel matrix between x_t_domain and z
-            z[:3*N_domain] = np.repeat(self.f(x_t_domain)- sol,3).reshape(-1,1) + self.dP(z)*np.repeat(sol,3).reshape(-1,1)
-            z[3*N_domain:] = self.g(x_t_boundary)
-            try:
-                U, S, Vt = np.linalg.svd(kernel_phi_phi)
-                S_inv = np.diag(1 / S)
-                kernel_phi_phi_inv = Vt.T @ S_inv @ U.T
-                right_vector = kernel_phi_phi_inv @ z
-            except np.linalg.LinAlgError:
-                right_vector = np.linalg.solve(kernel_phi_phi + self.nugget * np.eye(3 * N_domain + N_boundary), z)
+            z[:4*N_domain] = np.repeat(self.f(x_t_domain),4,axis=0).reshape(-1,1) -self.P(z)  + np.repeat(self.dP(z)*sol_domain,4,axis=0).reshape(-1,1)
+            z[4*N_domain:] = self.g(x_t_boundary) - z[4*N_domain:] + z[4*N_domain:]*sol_boundary
+            right_vector = kernel_phi_phi_inv @ z
             sol = kernel_x_phi @ right_vector
-        self.w1 = w1
+            sol_domain = sol[:N_domain]
+            sol_boundary = sol[N_domain:]
         self.right_vector = right_vector
-        return sol
+        return sol_domain
     
     def predict(self,x_t_infer):
         '''Predict the solution at x_t_infer'''
-        N_infer = x_t_infer.shape[0]
-        w0 = np.ones((N_infer,1))
-        w1 = self.w1
-        kernel_x_phi = self.kernel_x_t_phi(x_t_infer, self.x_t_domain, self.x_t_boundary, w0, w1) # Kernel matrix between x_t_domain and z
+        kernel_x_phi = self.kernel_x_t_phi(x_t_infer, self.x_t_domain, self.x_t_boundary) # Kernel matrix between x_t_domain and z
         sol_infer = kernel_x_phi @ self.right_vector
         return sol_infer
     
     def compute_gradient(self,x_t_infer,sol):
         '''Compute the gradient of the solution at x_t_infer'''
         N_infer = x_t_infer.shape[0]
-        w0 = np.ones((N_infer,1))
-        dx_t_kernel_x_t_phi = self.dx_t_kernel_x_t_phi(x_t_infer, self.x_t_domain, self.x_t_boundary, w0, self.w1)
+        dx_t_kernel_x_t_phi = self.dx_t_kernel_x_t_phi(x_t_infer, self.x_t_domain, self.x_t_boundary)
         gradient = np.zeros((N_infer,self.n_input))
         for i in range(N_infer):
             gradient[i] = (dx_t_kernel_x_t_phi[i].T @ self.right_vector)[:,0]
@@ -308,17 +311,21 @@ class GP_Complicated_HJB(GP):
     
     def f(self, x_t):
         '''Compute the nonlinear term on the right at x_t'''
-        return -2
+        N_domain = self.x_t_domain.shape[0]
+        return -2*np.ones((N_domain,1))
+    
+    def P(self, z):
+        '''Compute the value of operator P at z'''
+        N_domain = self.x_t_domain.shape[0]
+        d= self.d
+        P = np.repeat(z[N_domain:2*N_domain]-(1/d)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain],4,axis=0).reshape(-1,1)
+        return P
     
     def dP(self, z):
         '''Compute the value of the derivative of operator P at z'''
         N_domain = self.x_t_domain.shape[0]
-        d = self.d
-        z_domain = z[:3*N_domain]
-        dP = np.zeros_like(z_domain)
-        dP[:N_domain] = z[:N_domain]
-        dP[N_domain:2*N_domain] = z[N_domain:2*N_domain]*(-1/d)
-        dP[2*N_domain:3*N_domain] = z[2*N_domain:3*N_domain]
+        d= self.d
+        dP = z[N_domain:2*N_domain]-(1/d)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain]
         return dP
     
 class GP_Explicit_Solution_Example(GP):
@@ -334,20 +341,23 @@ class GP_Explicit_Solution_Example(GP):
         sum_x = torch.sum(tensor_x, axis=1)
         tensor_result=sum_x+(self.T-tensor_t)
         tensor_result=tensor_result.unsqueeze(1)
-        tensor_div_x =torch.sum(torch.autograd.grad(tensor_result, tensor_x_t, grad_outputs=torch.ones_like(tensor_result), create_graph=True)[0],dim=1,keepdim=True)
+        tensor_div_x =torch.sum(torch.autograd.grad(tensor_result, tensor_x, grad_outputs=torch.ones_like(tensor_result), create_graph=True)[0],dim=1,keepdim=True)
         tensor_f = -self.sigma**2*tensor_result*tensor_div_x
         f = tensor_f.detach().cpu().numpy()
         return f
+    
+    def P(self, z):
+        '''Compute the value of operator P at z'''
+        N_domain = self.x_t_domain.shape[0]
+        d= self.d
+        P = np.repeat(z[N_domain:2*N_domain]-(1/d+self.sigma**2/2)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain],4,axis=0).reshape(-1,1)
+        return P
     
     def dP(self, z):
         '''Compute the value of the derivative of operator P at z'''
         N_domain = self.x_t_domain.shape[0]
         d = self.d
-        z_domain = z[:3*N_domain]
-        dP = np.zeros_like(z_domain)
-        dP[:N_domain] = z[:N_domain]
-        dP[N_domain:2*N_domain] = z[N_domain:2*N_domain]*(-1/d-self.sigma**2/2)
-        dP[2*N_domain:3*N_domain] = z[2*N_domain:3*N_domain]
+        dP = z[N_domain:2*N_domain]-(1/d+self.sigma**2/2)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain]
         return dP
     
 

@@ -103,7 +103,7 @@ class ConvergenceRate(object):
 
                 # Measure the evaluation_number for solver1
                 if rho_==2:
-                    sol1 = self.solver1.GPsolver(xt_values, data_boundary, GN_step=2)  # sol1: ndarray, shape: (num_domain,), dtype: float
+                    sol1 = self.solver1.GPsolver(xt_values, data_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
                     evaluation_number1 += xt_values.shape[0]
                     evaluation_number_list1.append(evaluation_number1)
                 else:
