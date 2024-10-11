@@ -270,29 +270,24 @@ class GP(object):
         self.x_t_domain = x_t_domain
         self.x_t_boundary = x_t_boundary
         z = np.random.randn(4*N_domain+N_boundary, 1)
-        sol_domain = np.random.randn(N_domain,1)
-        sol_boundary = np.random.randn(N_boundary,1)
-        sol = np.concatenate((sol_domain, sol_boundary), axis=0) 
+        gamma = np.zeros((4*N_domain+N_boundary, 1))
+        right_value = np.zeros((4*N_domain+N_boundary, 1))
         kernel_phi_phi = self.kernel_phi_phi(x_t_domain, x_t_boundary)  # Kernel matrix between z and z
-        kernel_x_phi = self.kernel_x_t_phi(np.concatenate((x_t_domain,x_t_boundary),axis=0), x_t_domain, x_t_boundary) # Kernel matrix between x_t_domain and z
-        # Compute the Moore-Penrose pseudoinverse of kernel_phi_phi
-        U, S, Vt = np.linalg.svd(kernel_phi_phi)
-        S_inv = np.diag(1 / S)
-        kernel_phi_phi_inv = Vt.T @ S_inv @ U.T
         for i in range(GN_step):
-            z[:4*N_domain] = np.repeat(self.f(x_t_domain),4,axis=0).reshape(-1,1) -self.P(z)  + np.repeat(self.dP(z)*sol_domain,4,axis=0).reshape(-1,1)
-            z[4*N_domain:] = self.g(x_t_boundary) - z[4*N_domain:] + z[4*N_domain:]*sol_boundary
-            right_vector = kernel_phi_phi_inv @ z
-            sol = kernel_x_phi @ right_vector
-            sol_domain = sol[:N_domain]
-            sol_boundary = sol[N_domain:]
+            right_value[:4*N_domain] = np.repeat(self.f(x_t_domain)-self.P(z),4,axis=0).reshape(-1,1)+ self.dP(z)*z[:4*N_domain]
+            right_value[4*N_domain:] = self.g(x_t_boundary)
+            perturbed_kernel_phi_phi = kernel_phi_phi + self.nugget*np.eye(4*N_domain+N_boundary)
+            gamma = np.linalg.solve(perturbed_kernel_phi_phi, right_value)
+            z = kernel_phi_phi @ (np.concatenate((self.dP(z),np.ones((N_boundary,1))),axis=0)*gamma)
+        right_vector = np.linalg.solve(perturbed_kernel_phi_phi, z)
         self.right_vector = right_vector
-        return sol_domain
+        return z[:N_domain]
     
     def predict(self,x_t_infer):
         '''Predict the solution at x_t_infer'''
         kernel_x_phi = self.kernel_x_t_phi(x_t_infer, self.x_t_domain, self.x_t_boundary) # Kernel matrix between x_t_domain and z
-        sol_infer = kernel_x_phi @ self.right_vector
+        right_vector = self.right_vector
+        sol_infer = kernel_x_phi @ right_vector
         return sol_infer
     
     def compute_gradient(self,x_t_infer,sol):
@@ -318,14 +313,18 @@ class GP_Complicated_HJB(GP):
         '''Compute the value of operator P at z'''
         N_domain = self.x_t_domain.shape[0]
         d= self.d
-        P = np.repeat(z[N_domain:2*N_domain]-(1/d)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain],4,axis=0).reshape(-1,1)
+        P = z[N_domain:2*N_domain]-(1/d)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain]
         return P
     
     def dP(self, z):
         '''Compute the value of the derivative of operator P at z'''
         N_domain = self.x_t_domain.shape[0]
         d= self.d
-        dP = z[N_domain:2*N_domain]-(1/d)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain]
+        dP = np.zeros((4*N_domain,1))
+        # dP[:N_domain] = 0
+        dP[N_domain:2*N_domain] = 1
+        dP[2*N_domain:3*N_domain] = -1/d
+        dP[3*N_domain:4*N_domain] = 1
         return dP
     
 class GP_Explicit_Solution_Example(GP):
@@ -350,14 +349,18 @@ class GP_Explicit_Solution_Example(GP):
         '''Compute the value of operator P at z'''
         N_domain = self.x_t_domain.shape[0]
         d= self.d
-        P = np.repeat(z[N_domain:2*N_domain]-(1/d+self.sigma**2/2)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain],4,axis=0).reshape(-1,1)
+        P = z[N_domain:2*N_domain]-(1/d+self.sigma**2/2)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain]
         return P
     
     def dP(self, z):
         '''Compute the value of the derivative of operator P at z'''
         N_domain = self.x_t_domain.shape[0]
         d = self.d
-        dP = z[N_domain:2*N_domain]-(1/d+self.sigma**2/2)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain]
+        dP = np.zeros((4*N_domain,1))
+        # dP[:N_domain] = 0
+        dP[N_domain:2*N_domain] = 1
+        dP[2*N_domain:3*N_domain] = -(1/d+self.sigma**2/2)
+        dP[3*N_domain:4*N_domain] = 1
         return dP
     
 

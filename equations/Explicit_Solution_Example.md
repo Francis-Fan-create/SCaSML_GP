@@ -74,27 +74,21 @@ Feature vector $\phi$ have $N=M_\Omega+M_\Omega+M_\Omega+M_\Omega+(M-M_\Omega)$ 
 Taking derivatives under linearization condition
 $$
 \begin{align*}
-\nabla_z P(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)&=(0_{M_\Omega},1_{M_\Omega},-(\frac{1}{d}+\frac{\sigma^2}{2})\cdot1_{M_\Omega},1_{M_\Omega})&&\Rightarrow \frac{d}{du}P(u)=(0_{M_\Omega},1_{M_\Omega},-(\frac{1}{d}+\frac{\sigma^2}{2})\cdot1_{M_\Omega},1_{M_\Omega})\cdot(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)=\vec{z}_2-(\frac{1}{d}+\frac{\sigma^2}{2})\vec{z}_3+\vec{z}_4\\
-\nabla_v B(\vec{z}_5)&=1_{M_{\partial \Omega}}&& \Rightarrow \frac{d}{du} B(u)=1_{M_{\partial \Omega}}\cdot \vec{z}_5=\vec{z}_5
+\nabla_z P(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)&=\begin{pmatrix}0_{M_\Omega}\\1_{M_\Omega}\\-(\frac{1}{d}+\frac{\sigma^2}{2})\cdot1_{M_\Omega}\\1_{M_\Omega}\end{pmatrix}\\
+\nabla_z B(\vec{z}_5)&=1_{M_{\partial \Omega}}
 \end{align*}
 $$
-Update features at step $l+1$:
+Concatenate $\vec{z}_i,1\leq i\leq 5$:
 $$
-\begin{align}
-(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_{l+1}&=f(x_{1:M_\Omega})-P((\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_l)+\frac{d}{du}P(u)\cdot u(x_{1:M_\Omega})_l\\
-(\vec{z}_5)_{l+1}&=g(x_{1:M_{\partial\Omega}})-B((\vec{z}_5)_l)+\frac{d}{du}B(u)\cdot u(x_{1:M_{\partial\Omega}})_l
-\end{align}
+\vec{z}=\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\\\vec{z}_4\\\vec{z}_5\\\end{pmatrix}
 $$
-Note that $M=M_\Omega+M_{\partial\Omega}$.
-
 The iteration step becomes
 $$
 \begin{align}
-u(x_{1:M})&=K(x_{1:M},\phi_l)K(\phi_l,\phi_l)^{\dagger}\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\\\vec{z}_4\\\vec{z}_5\\\end{pmatrix}
+K(\phi_l,\phi_l)\vec{\gamma}_l&=\begin{pmatrix}f(x_{1:M_\Omega})-P((\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_l)\\f(x_{1:M_\Omega})-P((\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_l)\\f(x_{1:M_\Omega})-P((\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_l)\\f(x_{1:M_\Omega})-P((\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_l)\\g(x_{1:M_{\partial\Omega}})-B((\vec{z}_5)_l)\end{pmatrix}+\begin{pmatrix}\nabla_z P(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)\odot\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\\\vec{z}_4\end{pmatrix}_l\\\nabla_z B(\vec{z}_5)\odot(\vec{z}_5)_l\end{pmatrix}\\
+\vec{z}_{l+1}&=K(\phi_l,\phi_l)\begin{pmatrix}\nabla_z P(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)\\\nabla_z B(\vec{z}_5)\end{pmatrix}^T \vec{\gamma}_l
 \end{align}
 $$
-
-where $\dagger$ stands for Moore-Penrose inverse of the matrix.
 
 ## Parameters
 

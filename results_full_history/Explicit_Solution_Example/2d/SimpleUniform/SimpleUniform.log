@@ -1,12 +1,12 @@
-Total time for GP: 555.0587260723114 seconds
-Total time for MLP: 0.010065793991088867 seconds
-Total time for ScaSML: 5009.869107246399 seconds
-GP rel l1, rho=2-> min: 1.3046414691594013 max: 27946.593063957374 mean: 3498.6231304449816
-MLP rel l1, rho=2-> min: 2.6018350441604633e-05 max: 10.855861718091987 mean: 0.3954922583857499
-ScaSML rel l1, rho=2-> min: 6.036435230757572e+25 max: 3.8249455954508545e+39 mean: 1.334727464543661e+37
-Real Solution-> min: 0.31745708 max: 0.79498756 mean: 0.5581314
-GP l1, rho=2-> min: 0.5596445798873901 max: 8872.349675059319 mean: 1882.2641300947791
-MLP l1, rho=2-> min: 1.4974931896949428e-05 max: 4.829444561281319 mean: 0.20683230164926147
-ScaSML l1, rho=2-> min: 2.923165043358971e+25 max: 1.3922009438521132e+39 mean: 6.290371688398933e+36
-GP l1 - ScaSML l1,rho=2-> positve count: 0 negative count: 1000000 positive sum: 0.0 negative sum: -6.290371688398933e+42
-MLP l1- ScaSML l1,rho=2-> positve count: 0 negative count: 1000000 positive sum: 0.0 negative sum: -6.290371688398933e+42
+Total time for GP: 5.8117756843566895 seconds
+Total time for MLP: 0.0030438899993896484 seconds
+Total time for ScaSML: 51.40626406669617 seconds
+GP rel l1, rho=2-> min: 3.848018494362796e+25 max: 2.662232010812489e+29 mean: 3.79475250297312e+28
+MLP rel l1, rho=2-> min: 0.0008600525416000241 max: 3.627777996951992 mean: 0.2839184840117538
+ScaSML rel l1, rho=2-> min: 5.151999239675908e+105 max: 1.6388650363844614e+113 mean: 5.962119464361034e+111
+Real Solution-> min: 0.31745708 max: 0.7837269 mean: 0.54841524
+GP l1, rho=2-> min: 3.01579939330576e+25 max: 8.45147097718954e+28 mean: 2.0163216734991067e+28
+MLP l1, rho=2-> min: 0.0005130039964932331 max: 1.609424164108967 mean: 0.14465043790705978
+ScaSML l1, rho=2-> min: 3.011741611424768e+105 max: 8.762342805157305e+112 mean: 3.190011925949263e+111
+GP l1 - ScaSML l1,rho=2-> positve count: 0 negative count: 10000 positive sum: 0.0 negative sum: -3.190011925949263e+115
+MLP l1- ScaSML l1,rho=2-> positve count: 0 negative count: 10000 positive sum: 0.0 negative sum: -3.190011925949263e+115

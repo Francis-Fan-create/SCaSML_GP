@@ -43,7 +43,7 @@ class SimpleUniform(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=2, num_domain=1000, num_boundary=200):
+    def test(self, save_path, rhomax=2, num_domain=100, num_boundary=20):
         '''
         Compares solvers on different distances on the sphere.
 
