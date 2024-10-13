@@ -1,5 +1,8 @@
 import numpy as np
 import torch
+from scipy.optimize import minimize
+from scipy.linalg import cholesky
+
 class GP(object):
     '''Gaussian Kernel Solver for high dimensional PDE'''
     def __init__(self,equation):
@@ -17,7 +20,7 @@ class GP(object):
         self.n_input = equation.n_input  # Number of input features
         self.n_output = equation.n_output  # Number of output features
         self.d= self.n_input-1 # Number of spatial dimensions
-        self.sigma= equation.sigma() # Standard deviation 
+        self.sigma= equation.sigma()*np.sqrt(self.d) # Standard deviation for Gaussian kernel
         self.nugget = 1e-10  # Regularization parameter to ensure numerical stability
     
     def kappa(self,x_t,y_t):
@@ -341,7 +344,7 @@ class GP_Explicit_Solution_Example(GP):
         tensor_result=sum_x+(self.T-tensor_t)
         tensor_result=tensor_result.unsqueeze(1)
         tensor_div_x =torch.sum(torch.autograd.grad(tensor_result, tensor_x, grad_outputs=torch.ones_like(tensor_result), create_graph=True)[0],dim=1,keepdim=True)
-        tensor_f = -self.sigma**2*tensor_result*tensor_div_x
+        tensor_f = -self.equation.sigma()**2*tensor_result*tensor_div_x
         f = tensor_f.detach().cpu().numpy()
         return f
     
@@ -349,7 +352,7 @@ class GP_Explicit_Solution_Example(GP):
         '''Compute the value of operator P at z'''
         N_domain = self.x_t_domain.shape[0]
         d= self.d
-        P = z[N_domain:2*N_domain]-(1/d+self.sigma**2/2)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain]
+        P = z[N_domain:2*N_domain]-(1/d+self.equation.sigma()**2/2)*z[2*N_domain:3*N_domain]+z[3*N_domain:4*N_domain]
         return P
     
     def dP(self, z):
@@ -359,7 +362,7 @@ class GP_Explicit_Solution_Example(GP):
         dP = np.zeros((4*N_domain,1))
         # dP[:N_domain] = 0
         dP[N_domain:2*N_domain] = 1
-        dP[2*N_domain:3*N_domain] = -(1/d+self.sigma**2/2)
+        dP[2*N_domain:3*N_domain] = -(1/d+self.equation.sigma()**2/2)
         dP[3*N_domain:4*N_domain] = 1
         return dP
     
