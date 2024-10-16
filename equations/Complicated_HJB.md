@@ -36,58 +36,45 @@ $$
 $$
 Let the nonlinear term be
 $$
-f(x,t)=-2
+y_{domain}=-2-\frac{\partial u}{\partial t}+\frac1d div_x u=-2
 $$
 Define operators
 $$
 \begin{align}
-L_1(u):u&\rightarrow\frac{\partial u}{\partial t}\\
-L_2(u):u&\rightarrow div_x u\\
-L_3(u):u&\rightarrow \Delta_x u
+L(u):u&\rightarrow \Delta_x u
 \end{align}
 $$
 We define feature functions
 $$
 \begin{align}
 \phi^1_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ u ,1\leq j\leq M_\Omega\\
-\phi^2_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L_1 \circ u,1\leq j\leq M_\Omega\\
-\phi^3_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L_2 \circ u,1\leq j\leq M_\Omega\\
-\phi^4_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L_3 \circ u,1\leq j\leq M_\Omega\\
-\phi^5_j(u)&:u\rightarrow \delta_{x_{\partial\Omega}^j}\circ u,1\leq j\leq M_{\partial \Omega}\\
+\phi^2_j(u)&:u\rightarrow \delta_{x_{\partial\Omega}^j}\circ u,1\leq j\leq M_{\partial \Omega}\\
+\phi^3_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L \circ u,1\leq j\leq M_\Omega\\
 \end{align}
 $$
-Denote $\vec{z}_i=\phi^i_{1:M_\Omega}(u),1\leq i\leq 4$ and $\vec{z}_i=\phi^i_{1:M_{\partial \Omega}}(u),i=5$.
+Denote $\vec{z}_i=\phi^i_{1:M_\Omega}(u),i\in\{1,3\}$ and $\vec{z}_i=\phi^i_{1:M_{\partial \Omega}}(u),i=2$.
 
+Let 
+$$
+\vec{z}=\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\end{pmatrix}
+$$
 We then derive
 $$
 \begin{align}
-P(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)&=\vec{z}_2-\frac{1}{d}\vec{z}_3+\vec{z}_4\\
-B(\vec{z}_5)&=\vec{z}_5
+F(\vec{z})=\begin{pmatrix}\vec{z}_3\\\vec{z}_2\end{pmatrix}
 \end{align}
 $$
-Thus $Q_\Omega=4, Q=5$. 
+Thus $Q_\Omega=2, Q=3$. 
 
-Feature vector $\phi$ have $N=M_\Omega+M_\Omega+M_\Omega+M_\Omega+(M-M_\Omega)$ components, which is also the size of the kernel matrix.
+Feature vector $\phi$ have $M=M_{\Omega}+ M_{\partial \Omega}+ M_{\Omega}$ components, which is also the size of the kernel matrix.
 
 Taking derivatives under linearization condition
 $$
 \begin{align*}
-\nabla_z P(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)&=\begin{pmatrix}0_{M_\Omega}\\1_{M_\Omega}\\-\frac{1}{d}\cdot1_{M_\Omega}\\1_{M_\Omega}\end{pmatrix}\\
-\nabla_z B(\vec{z}_5)&=1_{M_{\partial \Omega}}
+DF(\vec{z}_{k})=\begin{pmatrix}0 && 0 && I_{M_{\Omega}}\\
+0 && I_{M_{\partial \Omega}} && 0\end{pmatrix}
 \end{align*}
 $$
-Concatenate $\vec{z}_i,1\leq i\leq 5$:
-$$
-\vec{z}=\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\\\vec{z}_4\\\vec{z}_5\\\end{pmatrix}
-$$
-The iteration step becomes
-$$
-\begin{align}
-K(\phi_l,\phi_l)\vec{\gamma}_l&=\begin{pmatrix}f(x_{1:M_\Omega})-P((\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_l)\\f(x_{1:M_\Omega})-P((\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_l)\\f(x_{1:M_\Omega})-P((\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_l)\\f(x_{1:M_\Omega})-P((\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)_l)\\g(x_{1:M_{\partial\Omega}})-B((\vec{z}_5)_l)\end{pmatrix}+\begin{pmatrix}\nabla_z P(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)\odot\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\\\vec{z}_4\end{pmatrix}_l\\\nabla_z B(\vec{z}_5)\odot(\vec{z}_5)_l\end{pmatrix}\\
-\vec{z}_{l+1}&=K(\phi_l,\phi_l)\begin{pmatrix}\nabla_z P(\vec{z}_1,\vec{z}_2,\vec{z}_3,\vec{z}_4)\\\nabla_z B(\vec{z}_5)\end{pmatrix}^T \vec{\gamma}_l
-\end{align}
-$$
-
 ## Parameters
 
 Specifically, we consider the problem for
