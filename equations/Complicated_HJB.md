@@ -36,12 +36,14 @@ $$
 $$
 Let the nonlinear term be
 $$
-y_{domain}=-2-\frac{\partial u}{\partial t}+\frac1d div_x u=-2
+\vec{y}_{domain}=-2\cdot 1_{M_\Omega}
 $$
 Define operators
 $$
 \begin{align}
-L(u):u&\rightarrow \Delta_x u
+L_1(u):u&\rightarrow \Delta_x u\\
+L_2(u):u&\rightarrow \frac{\partial u}{\partial t}\\
+L_3(u):u&\rightarrow div_x u
 \end{align}
 $$
 We define feature functions
@@ -49,30 +51,32 @@ $$
 \begin{align}
 \phi^1_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ u ,1\leq j\leq M_\Omega\\
 \phi^2_j(u)&:u\rightarrow \delta_{x_{\partial\Omega}^j}\circ u,1\leq j\leq M_{\partial \Omega}\\
-\phi^3_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L \circ u,1\leq j\leq M_\Omega\\
+\phi^3_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L_1 \circ u,1\leq j\leq M_\Omega\\
+\phi^4_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L_2 \circ u,1\leq j\leq M_\Omega\\
+\phi^5_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L_3 \circ u,1\leq j\leq M_\Omega\\
 \end{align}
 $$
-Denote $\vec{z}_i=\phi^i_{1:M_\Omega}(u),i\in\{1,3\}$ and $\vec{z}_i=\phi^i_{1:M_{\partial \Omega}}(u),i=2$.
+Denote $\vec{z}_i=\phi^i_{1:M_\Omega}(u),i\in\{1,3,4,5\}$ and $\vec{z}_i=\phi^i_{1:M_{\partial \Omega}}(u),i=2$.
 
 Let 
 $$
-\vec{z}=\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\end{pmatrix}
+\vec{z}=\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\\\vec{z}_4\\\vec{z}_5\end{pmatrix}
 $$
 We then derive
 $$
 \begin{align}
-F(\vec{z})=\begin{pmatrix}\vec{z}_3\\\vec{z}_2\end{pmatrix}
+F(\vec{z})=\begin{pmatrix}\vec{z}_4-\frac1d \vec{z}_5+\vec{z}_3\\\vec{z}_2\end{pmatrix}
 \end{align}
 $$
-Thus $Q_\Omega=2, Q=3$. 
+Thus $Q_\Omega=4, Q=3$. 
 
-Feature vector $\phi$ have $M=M_{\Omega}+ M_{\partial \Omega}+ M_{\Omega}$ components, which is also the size of the kernel matrix.
+Feature vector $\phi$ have $M=4M_{\partial \Omega}+ M_{\Omega}$ components, which is also the size of the kernel matrix.
 
 Taking derivatives under linearization condition
 $$
 \begin{align*}
-DF(\vec{z}_{k})=\begin{pmatrix}0 && 0 && I_{M_{\Omega}}\\
-0 && I_{M_{\partial \Omega}} && 0\end{pmatrix}
+DF(\vec{z}_{k})=\begin{pmatrix}0 && 0 && I_{M_{\Omega}} && I_{M_{\Omega}} && -\frac1d I_{M_{\Omega}}\\
+0 && I_{M_{\partial \Omega}} && 0 && 0 && 0\end{pmatrix}
 \end{align*}
 $$
 ## Parameters

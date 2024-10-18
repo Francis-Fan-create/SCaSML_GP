@@ -38,12 +38,14 @@ $$
 $$
 Let the nonlinear term be
 $$
-y_{domain}=-\frac{2}{\sigma^2}\frac{\partial u}{\partial t}+(1+\frac{2}{d\sigma^2}-2u)div_x u=(-\frac{2}{\sigma^2}+1+\frac{2}{d\sigma^2}-\frac{2\exp(t+\sum_{i=1}^d x_i)}{1+\exp(t+\sum_{i=1}^d x_i)})\frac{\exp(t+\sum_{i=1}^d x_i)}{(1+\exp(t+\sum_{i=1}^d x_i))^2}
+\vec{y}_{domain}=0_{M_{\Omega}}
 $$
 Define operators
 $$
 \begin{align}
-L(u):u&\rightarrow \Delta_x u
+L_1(u):u&\rightarrow \Delta_x u\\
+L_2(u):u&\rightarrow \frac{\partial u}{\partial t}\\
+L_3(u):u&\rightarrow div_x u
 \end{align}
 $$
 We define feature functions
@@ -51,30 +53,32 @@ $$
 \begin{align}
 \phi^1_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ u ,1\leq j\leq M_\Omega\\
 \phi^2_j(u)&:u\rightarrow \delta_{x_{\partial\Omega}^j}\circ u,1\leq j\leq M_{\partial \Omega}\\
-\phi^3_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L \circ u,1\leq j\leq M_\Omega\\
+\phi^3_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L_1 \circ u,1\leq j\leq M_\Omega\\
+\phi^4_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L_2 \circ u,1\leq j\leq M_\Omega\\
+\phi^5_j(u)&:u\rightarrow \delta_{x_\Omega^j}\circ L_3 \circ u,1\leq j\leq M_\Omega\\
 \end{align}
 $$
-Denote $\vec{z}_i=\phi^i_{1:M_\Omega}(u),i\in\{1,3\}$ and $\vec{z}_i=\phi^i_{1:M_{\partial \Omega}}(u),i=2$.
+Denote $\vec{z}_i=\phi^i_{1:M_\Omega}(u),i\in\{1,3,4,5\}$ and $\vec{z}_i=\phi^i_{1:M_{\partial \Omega}}(u),i=2$.
 
 Let 
 $$
-\vec{z}=\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\end{pmatrix}
+\vec{z}=\begin{pmatrix}\vec{z}_1\\\vec{z}_2\\\vec{z}_3\\\vec{z}_4\\\vec{z}_5\end{pmatrix}
 $$
 We then derive
 $$
 \begin{align}
-F(\vec{z})=\begin{pmatrix}\vec{z}_3\\\vec{z}_2\end{pmatrix}
+F(\vec{z})=\begin{pmatrix}\vec{z}_4+\sigma^2\vec{z}_1\odot\vec{z}_5-(\frac1d +\frac{\sigma^2}{2})\vec{z}_5+\frac{\sigma^2}{2}\vec{z}_3\\\vec{z}_2\end{pmatrix}
 \end{align}
 $$
-Thus $Q_\Omega=2, Q=3$. 
+Thus $Q_\Omega=4, Q=5$. 
 
-Feature vector $\phi$ have $M=M_{\Omega} +M_{\partial \Omega}+ M_{\Omega}$ components, which is also the size of the kernel matrix.
+Feature vector $\phi$ have $M=4M_{\partial \Omega}+ M_{\Omega}$ components, which is also the size of the kernel matrix.
 
 Taking derivatives under linearization condition
 $$
 \begin{align*}
-DF(\vec{z}_{k})=\begin{pmatrix}0 && 0 && I_{M_{\Omega}}\\
-0 && I_{M_{\partial \Omega}} && 0\end{pmatrix}
+DF(\vec{z}_{k})=\begin{pmatrix}\sigma^2\text{diag}(\vec{z}_5) && 0 && \frac{\sigma^2}{2}I_{M_{\Omega}}&& I_{M_{\Omega}} && \sigma^2\text{diag}(\vec{z}_1)-(\frac1d+\frac{\sigma^2}{2})I_{M_{\Omega}} \\
+0 && I_{M_{\partial \Omega}} && 0 && 0 && 0\end{pmatrix}
 \end{align*}
 $$
 
