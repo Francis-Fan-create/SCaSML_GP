@@ -82,6 +82,61 @@ DF(\vec{z}_{k})=\begin{pmatrix}\sigma^2\text{diag}(\vec{z}_5) && 0 && \frac{\sig
 \end{align*}
 $$
 
+Run the algorithm as the following:
+
+Step 1: Construct $\mathbf{y}$
+$$
+\mathbf{y}=\begin{pmatrix}\vec{y}_{domain}\\g((x,t)_{1:M_{\partial \Omega}}^{\partial \Omega})\end{pmatrix}
+$$
+Step 2: Solve $\gamma$
+$$
+\left(DF(\vec{z}^{k})K(\phi,\phi)(DF(\vec{z}^{k}))^{T}\right)\gamma=\mathbf{y}-F(\vec{z}^{k})+DF(\vec{z}^{k})\vec{z}^{k} .
+$$
+where:
+$$
+K(\phi,\phi)=\begin{pmatrix}
+K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&& K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_{\partial \Omega}^{1:M_{\partial\Omega}}) && \Delta_y K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&& D_{t_y}K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&&div_y K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})\\
+K((x,t_x)_{\partial \Omega}^{1:M_{\partial\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&& K((x,t_x)_{\partial \Omega}^{1:M_{\partial\Omega}},(y,t_y)_{\partial \Omega}^{1:M_{\partial\Omega}}) && \Delta_y K((x,t_x)_{\partial \Omega}^{1:M_{\partial\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&& D_{t_y}K((x,t_x)_{\partial \Omega}^{1:M_{\partial\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&&div_y K((x,t_x)_{\partial \Omega}^{1:M_{\partial\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})\\
+\Delta_x K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&& \Delta_x K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_{\partial \Omega}^{1:M_{\partial\Omega}}) && \Delta_x\Delta_y K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&&\Delta_x D_{t_y}K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&&\Delta_x div_y K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})\\
+D_{t_x}K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&&D_{t_x} K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_{\partial \Omega}^{1:M_{\partial\Omega}}) &&D_{t_x} \Delta_y K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&& D_{t_x}D_{t_y}K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&&D_{t_x} div_y K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})\\
+div_x K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&&div_x  K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_{\partial \Omega}^{1:M_{\partial\Omega}}) &&div_x  \Delta_y K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&& div_x  D_{t_y}K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})&&div_x div_y K((x,t_x)_\Omega^{1:M_{\Omega}},(y,t_y)_\Omega^{1:M_{\Omega}})
+\end{pmatrix}
+$$
+Under the RBF kernel we use, for $\tilde{\sigma}=\sigma\cdot\sqrt{d}$, we have:
+$$
+K(\phi,\phi) = \begin{pmatrix}
+e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & (-\frac{d}{\tilde{\sigma}^2}+\frac{\|x-y\|^2}{\tilde{\sigma}^4})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{t_y-t_x}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{\sum(y-x)}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} \\
+
+e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & (-\frac{d}{\tilde{\sigma}^2}+\frac{\|x-y\|^2}{\tilde{\sigma}^4})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{t_y-t_x}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{\sum(y-x)}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} \\
+
+(-\frac{d}{\tilde{\sigma}^2}+\frac{\|x-y\|^2}{\tilde{\sigma}^4})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & (-\frac{d}{\tilde{\sigma}^2}+\frac{\|x-y\|^2}{\tilde{\sigma}^4})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & (\frac{d(d+2)}{\tilde{\sigma}^4}-\frac{2(d+2)\|x-y\|^2}{\tilde{\sigma}^6}+\frac{\|x-y\|^4}{\tilde{\sigma}^8})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & \frac{t_x-t_y}{\tilde{\sigma}^2}(-\frac{d}{\tilde{\sigma}^2}+\frac{\|x-y\|^2}{\tilde{\sigma}^4})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & (\frac{(d+1)\sum(y-x)}{\tilde{\sigma}^4}+\frac{\sum(y-x)}{\tilde{\sigma}^6}-\frac{\|y-x\|^2\sum(y-x)}{\tilde{\sigma}^8})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} \\
+
+-\frac{t_x-t_y}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{t_x-t_y}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & \frac{t_y-t_x}{\tilde{\sigma}^2}(-\frac{d}{\tilde{\sigma}^2}+\frac{\|x-y\|^2}{\tilde{\sigma}^4})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{(t_x-t_y)^2}{\tilde{\sigma}^4}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & \frac{t_y-t_x}{\tilde{\sigma}^2}(-\frac{\sum(x-y)}{\tilde{\sigma}^2})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} \\
+
+-\frac{\sum(x-y)}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{\sum(x-y)}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & (\frac{(d+1)\sum(x-y)}{\tilde{\sigma}^4}+\frac{\sum(x-y)}{\tilde{\sigma}^6}-\frac{\|x-y\|^2\sum(x-y)}{\tilde{\sigma}^8})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{(t_x-t_y)\sum(x-y)}{\tilde{\sigma}^4}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & (\frac{d}{\tilde{\sigma}^2}-\frac{(\sum(x-y))^2}{\tilde{\sigma}^4})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}}
+\end{pmatrix}
+$$
+Step 3: Compute $\vec{z}^{k+1}$
+$$
+\vec{z}^{k+1}=K(\phi,\phi)(DF(\vec{z}^{k}))^{T}\gamma
+$$
+Step 4: Return the solution
+$$
+u((x,t)_{\Omega_{infer}}^{1:M_{\Omega_{infer}}})=K((x,t)_{\Omega_{infer}}^{1:M_{\Omega_{infer}}},\phi)K(\phi,\phi)^{-1}\vec{z}^{k+1}
+$$
+where we have
+$$
+K((x,t)_{\Omega_{infer}}^{1:M_{\Omega_{infer}}},\phi)=\begin{pmatrix}
+K((x,t)_{\Omega_{infer}}^{1:M_{\Omega_{infer}}},\phi),(y,t_y)_\Omega^{1:M_{\Omega}})&& K((x,t)_{\Omega_{infer}}^{1:M_{\Omega_{infer}}},\phi),\phi),(y,t_y)_{\partial \Omega}^{1:M_{\partial\Omega}}) && \Delta_y K((x,t)_{\Omega_{infer}}^{1:M_{\Omega_{infer}}},\phi),(y,t_y)_\Omega^{1:M_{\Omega}})&& D_{t_y}K((x,t)_{\Omega_{infer}}^{1:M_{\Omega_{infer}}},\phi),(y,t_y)_\Omega^{1:M_{\Omega}})&&div_y K((x,t)_{\Omega_{infer}}^{1:M_{\Omega_{infer}}},\phi),(y,t_y)_\Omega^{1:M_{\Omega}})
+\end{pmatrix}
+$$
+i.e.
+$$
+K((x,t)_{\Omega_{infer}}^{1:M_{\Omega_{infer}}},\phi)=\begin{pmatrix}
+e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & (-\frac{d}{\tilde{\sigma}^2}+\frac{\|x-y\|^2}{\tilde{\sigma}^4})e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{t_y-t_x}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} & -\frac{\sum(y-x)}{\tilde{\sigma}^2}e^{-\frac{\|(x,t_x)-(y,t_y)\|^2}{2\tilde{\sigma}^2}} \end{pmatrix}
+$$
+
+
 ## Parameters
 
 Specifically, we consider the problem for

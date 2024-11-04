@@ -468,7 +468,7 @@ class Complicated_HJB(Equation):
         Returns:
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
-        return 2*np.ones_like(u)
+        return np.sqrt(2)*np.ones_like(u)
     
     def exact_solution(self, x_t):
         '''

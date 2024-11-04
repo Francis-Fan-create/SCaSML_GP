@@ -1,11 +1,10 @@
 import numpy as np
-import torch
-from scipy.linalg import solve_triangular,pinv
-from scipy.spatial.distance import cdist
-from scipy.special import kv, gamma
+import jax.numpy as jnp
+from jax import grad, vmap, hessian
+import jax.ops as jop
+from scipy.linalg import null_space
 
-
-
+    
 class GP(object):
     '''Gaussian Kernel Solver for high dimensional PDE'''
     def __init__(self,equation):
@@ -24,7 +23,7 @@ class GP(object):
         self.n_output = equation.n_output  # Number of output features
         self.d= self.n_input-1 # Number of spatial dimensions
         self.sigma= equation.sigma()*np.sqrt(self.d) # Standard deviation for Gaussian kernel
-        self.nugget = 1e-5  # Regularization parameter to ensure numerical stability
+        self.nugget = 1e-10  # Regularization parameter to ensure numerical stability
     
     def kappa(self,x_t,y_t):
         '''Compute the kernel entry K(x_t,y_t) for single vector x_t and y_t'''
@@ -317,7 +316,6 @@ class GP(object):
                 div_x_t_kernel_x_phi[i, j] = self.div_x_div_y_kappa(x_t_infer[i], x_t_domain[j-3*N_domain-N_boundary])
         return div_x_t_kernel_x_phi
     
-    
     def y_domain(self,x_t):
         '''Compute the nonlinear term on the right at x_t'''
         raise NotImplementedError
@@ -325,9 +323,8 @@ class GP(object):
     def y_boundary(self,x_t):
         '''Compute the terminal condition at x_t'''
         return self.equation.g(x_t)[:,np.newaxis]
-    
 
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_step=4):
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_step=1):
         '''Solve the Gaussian Process for the given domain and boundary points'''
         N_domain = x_t_domain.shape[0]
         N_boundary = x_t_boundary.shape[0]
@@ -346,7 +343,8 @@ class GP(object):
             z_k_plus_1 = kernel_phi_phi @ DF_k.T @ gamma
             z_k = z_k_plus_1
         self.right_vector = np.linalg.solve(kernel_phi_phi+self.nugget*np.eye(4* N_domain+N_boundary), z_k)
-        return z_k[:N_domain]
+        sol = self.kernel_x_t_phi(x_t_domain, x_t_domain, x_t_boundary) @ self.right_vector
+        return sol
     
     def predict(self,x_t_infer):
         '''Predict the solution at x_t_infer'''
@@ -489,6 +487,12 @@ class GP_Explicit_Solution_Example(GP):
         sol = self.predict(x_t_infer)
         loss = dt_x_t_sol + (sigma**2*sol-(1/d)-(sigma**2/2))*div_x_sol + (sigma**2/2)*laplacian_x_t_sol
         return loss
+
+
+
+    
+    
+
     
 
     

@@ -26,6 +26,8 @@ dde.config.set_random_seed(1234)
 dde.backend.set_default_backend('pytorch')
 # fix random seed for numpy
 np.random.seed(1234)
+# fix random seed for torch
+torch.manual_seed(1234)
 #set default data type
 torch.set_default_dtype(torch.float64)
 # device configuration

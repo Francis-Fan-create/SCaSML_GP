@@ -64,7 +64,7 @@ class GPRate(object):
         eq_dim=eq.n_input-1
         geom = eq.geometry()
         _,data_boundary=eq.generate_data(1,20)
-        random_methods = ["Halton", "LHS", "pseudo", "Hammersley"]
+        random_methods = ["LHS"]
         for random_method in random_methods:
             errors_list = []
             for index,sample_size in enumerate(sample_sizes):
