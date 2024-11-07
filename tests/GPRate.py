@@ -40,7 +40,7 @@ class GPRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, sample_sizes=range(100, 1001, 100)):
+    def test(self, save_path, sample_sizes=range(2000, 6001, 1000)):
         '''
         Compares solvers on different distances on the sphere.
 
@@ -63,7 +63,7 @@ class GPRate(object):
         eq_name = eq.__class__.__name__
         eq_dim=eq.n_input-1
         geom = eq.geometry()
-        _,data_boundary=eq.generate_data(1,20)
+        _,data_boundary=eq.generate_data(1,200)
         random_methods = ["LHS"]
         for random_method in random_methods:
             errors_list = []
@@ -92,23 +92,51 @@ class GPRate(object):
             errors_array = np.array(errors_list)  # errors_array: ndarray, shape: (len(sample_sizes),), dtype: float
 
             
-            
-            # Plot the convergence rate for GP
-            plt.figure()
-            plt.plot(np.log10(sample_sizes_array + epsilon), np.log10(np.array(errors_array) + epsilon), label='GP')
-            slope_1_2 = -1/2 * (np.log10(sample_sizes_array+epsilon)-np.log10(sample_sizes_array[0]+epsilon)) + np.log10(errors_array[0] + epsilon)
-            slope_1_4 = -1/4 * (np.log10(sample_sizes_array+epsilon)-np.log10(sample_sizes_array[0]+epsilon)) + np.log10(errors_array[0] + epsilon)
-            plt.plot(np.log10(sample_sizes_array + epsilon), slope_1_2, label='slope=-1/2')
-            plt.plot(np.log10(sample_sizes_array + epsilon), slope_1_4, label='slope=-1/4')
-            plt.scatter(np.log10(sample_sizes_array + epsilon), np.log10(np.array(errors_array) + epsilon), marker='x')
-            plt.scatter(np.log10(sample_sizes_array + epsilon), slope_1_2, marker='x')
-            plt.scatter(np.log10(sample_sizes_array + epsilon), slope_1_4, marker='x')
-            plt.title(f'GP - Sample Rate {random_method}')
-            plt.xlabel('log10(sample_size)')
-            plt.ylabel('log10(error)')
-            plt.legend()
-            plt.savefig(f'{save_path}/GP_sample_rate_{random_method}.png')
-            wandb.log({f'GP_sample_rate_{random_method}': plt})
+        # Plot the convergence rate for GP
+        plt.figure()
+
+        # Plot the original data without taking the logarithm
+        plt.plot(sample_sizes_array + epsilon, errors_array + epsilon, label='GP')
+
+        # Define the reference point for calculating slopes
+        x0 = sample_sizes_array[0] + epsilon
+        y0 = errors_array[0] + epsilon
+
+        # Calculate slope lines based on theoretical convergence rates
+        # For slope = -1/2: error = C * (sample_size)^(-1/2)
+        C1_2 = y0 * (x0 ** 0.5)
+        slope_1_2 = C1_2 * (sample_sizes_array + epsilon) ** (-0.5)
+
+        # For slope = -1/4: error = C * (sample_size)^(-1/4)
+        C1_4 = y0 * (x0 ** 0.25)
+        slope_1_4 = C1_4 * (sample_sizes_array + epsilon) ** (-0.25)
+
+        # Plot the slope lines
+        plt.plot(sample_sizes_array + epsilon, slope_1_2, label='slope=-1/2')
+        plt.plot(sample_sizes_array + epsilon, slope_1_4, label='slope=-1/4')
+
+        # Add scatter markers for the original data and slope lines
+        plt.scatter(sample_sizes_array + epsilon, errors_array + epsilon, marker='x')
+        plt.scatter(sample_sizes_array + epsilon, slope_1_2, marker='x')
+        plt.scatter(sample_sizes_array + epsilon, slope_1_4, marker='x')
+
+        # Set plot titles and labels
+        plt.title(f'GP - Sample Rate {random_method}')
+        plt.xlabel('Sample Size')
+        plt.ylabel('Error')
+
+        # Apply logarithmic scales to both axes
+        plt.xscale('log')
+        plt.yscale('log')
+
+        # Add legend to distinguish between plots
+        plt.legend()
+
+        # Save the plot to the specified path
+        plt.savefig(f'{save_path}/GP_sample_rate_{random_method}.png')
+
+        # Log the plot using Weights & Biases (wandb)
+        wandb.log({f'GP_sample_rate_{random_method}': plt})
             
         
         return 0

@@ -23,7 +23,7 @@ class GP(object):
         self.n_output = equation.n_output  # Number of output features
         self.d= self.n_input-1 # Number of spatial dimensions
         self.sigma= equation.sigma()*np.sqrt(self.d) # Standard deviation for Gaussian kernel
-        self.nugget = 1e-10  # Regularization parameter to ensure numerical stability
+        self.nugget = 1e-6  # Regularization parameter to ensure numerical stability
     
     def kappa(self,x_t,y_t):
         '''Compute the kernel entry K(x_t,y_t) for single vector x_t and y_t'''
@@ -324,27 +324,47 @@ class GP(object):
         '''Compute the terminal condition at x_t'''
         return self.equation.g(x_t)[:,np.newaxis]
 
+    # def GPsolver(self, x_t_domain, x_t_boundary, GN_step=1):
+    #     '''Solve the Gaussian Process for the given domain and boundary points'''
+    #     N_domain = x_t_domain.shape[0]
+    #     N_boundary = x_t_boundary.shape[0]
+    #     self.x_t_domain = x_t_domain
+    #     self.x_t_boundary = x_t_boundary
+    #     self.N_domain = N_domain
+    #     self.N_boundary = N_boundary
+    #     z_k = np.random.uniform(-1,1,(4* N_domain+N_boundary,1))
+    #     y = np.concatenate((self.y_domain(x_t_domain),self.y_boundary(x_t_boundary)), axis=0)
+    #     gamma = np.zeros((N_domain+N_boundary,1))
+    #     kernel_phi_phi = self.kernel_phi_phi(x_t_domain, x_t_boundary) # Kernel matrix between z and z
+    #     for i in range(GN_step):
+    #         DF_k = self.DF(z_k)
+    #         proj_kernel_phi_phi = DF_k @ kernel_phi_phi @ DF_k.T
+    #         gamma = np.linalg.solve(proj_kernel_phi_phi+self.nugget*np.eye(N_domain+N_boundary), (y-self.F(z_k)+DF_k @ z_k))
+    #         z_k_plus_1 = kernel_phi_phi @ DF_k.T @ gamma
+    #         z_k = z_k_plus_1
+    #     self.right_vector = np.linalg.solve(kernel_phi_phi+self.nugget*np.eye(4* N_domain+N_boundary), z_k)
+    #     sol = self.kernel_x_t_phi(x_t_domain, x_t_domain, x_t_boundary) @ self.right_vector
+    #     return sol
+
+
     def GPsolver(self, x_t_domain, x_t_boundary, GN_step=1):
-        '''Solve the Gaussian Process for the given domain and boundary points'''
+        '''Solve the Gaussian Process for the given domain and boundary points for linear PDE'''
         N_domain = x_t_domain.shape[0]
         N_boundary = x_t_boundary.shape[0]
         self.x_t_domain = x_t_domain
         self.x_t_boundary = x_t_boundary
         self.N_domain = N_domain
         self.N_boundary = N_boundary
-        z_k = np.random.uniform(-1,1,(4* N_domain+N_boundary,1))
+        z = np.random.uniform(-1,1,(4* N_domain+N_boundary,1))
         y = np.concatenate((self.y_domain(x_t_domain),self.y_boundary(x_t_boundary)), axis=0)
-        gamma = np.zeros((N_domain+N_boundary,1))
-        kernel_phi_phi = self.kernel_phi_phi(x_t_domain, x_t_boundary) # Kernel matrix between z and z
-        for i in range(GN_step):
-            DF_k = self.DF(z_k)
-            proj_kernel_phi_phi = DF_k @ kernel_phi_phi @ DF_k.T
-            gamma = np.linalg.solve(proj_kernel_phi_phi+self.nugget*np.eye(N_domain+N_boundary), (y-self.F(z_k)+DF_k @ z_k))
-            z_k_plus_1 = kernel_phi_phi @ DF_k.T @ gamma
-            z_k = z_k_plus_1
-        self.right_vector = np.linalg.solve(kernel_phi_phi+self.nugget*np.eye(4* N_domain+N_boundary), z_k)
-        sol = self.kernel_x_t_phi(x_t_domain, x_t_domain, x_t_boundary) @ self.right_vector
-        return sol
+        kernel_phi_phi = self.kernel_phi_phi(x_t_domain, x_t_boundary) 
+        kernel_phi_phi_perturb = kernel_phi_phi + self.nugget*np.eye(4* N_domain+N_boundary)
+        DF = self.DF(z)
+        z = kernel_phi_phi @ DF.T @ (np.linalg.solve(DF @ kernel_phi_phi @ DF.T +self.nugget*np.eye(N_domain+N_boundary), y))
+        right_vector = np.linalg.solve(kernel_phi_phi_perturb, z)
+        self.right_vector = right_vector
+        sol_on_domain = self.kernel_x_t_phi(x_t_domain, x_t_domain, x_t_boundary) @ right_vector
+        return sol_on_domain
     
     def predict(self,x_t_infer):
         '''Predict the solution at x_t_infer'''
