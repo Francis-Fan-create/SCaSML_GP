@@ -18,6 +18,8 @@ import numpy as np
 import torch
 import wandb
 import deepxde as dde
+import jax
+from jax import config
 
 
 #fix random seed for dde
@@ -26,16 +28,20 @@ dde.config.set_random_seed(1234)
 dde.backend.set_default_backend('pytorch')
 # fix random seed for numpy
 np.random.seed(1234)
+# fix random seed for jax
+jax.random.key = jax.random.PRNGKey(1234)
 # fix random seed for torch
 torch.manual_seed(1234)
 #set default data type
 torch.set_default_dtype(torch.float64)
-# device configuration
+# device configuration for torch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 if device.type == 'cuda':
     # get GPU name
     gpu_name = torch.cuda.get_device_name()
+# device configuration for jax
+config.update("jax_enable_x64", True)
 
 #initialize wandb
 wandb.init(project="Complicated_HJB", notes="2 d", tags=["Gaussian Process"],mode="disabled") #debug mode
@@ -54,9 +60,9 @@ solver3=ScaSML_full_history(equation=equation,GP=solver1) #ScaSML object
 # #run the test for NormalSphere
 # test1=NormalSphere(equation,solver1,solver2,solver3)
 # rhomax=test1.test(r"results_full_history/Complicated_HJB/2d")
-#run the test for SimpleUniform
-test2=SimpleUniform(equation,solver1,solver2,solver3)
-test2.test(r"results_full_history/Complicated_HJB/2d")
+# #run the test for SimpleUniform
+# test2=SimpleUniform(equation,solver1,solver2,solver3)
+# test2.test(r"results_full_history/Complicated_HJB/2d")
 # #run the test for ConvergenceRate
 # test3=ConvergenceRate(equation,solver1,solver2,solver3)
 # test3.test(r"results_full_history/Complicated_HJB/2d")

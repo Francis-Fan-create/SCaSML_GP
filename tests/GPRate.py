@@ -46,97 +46,120 @@ class GPRate(object):
 
         Parameters:
         save_path (str): The path to save the results.
-        sample_sizes (list): The number of samples for testing, should be a list to plot the convergence rate.
-
+        sample_sizes (list): The number of training samples, should be a list to plot the convergence rate.
         '''
-        #initialize the profiler
+        # Initialize the profiler
         profiler = cProfile.Profile()
-        profiler.enable()      
-        # create the save path if it does not exist
+        profiler.enable()
+
+        # Create the save path if it does not exist
         class_name = self.__class__.__name__
         new_path = f"{save_path}/{class_name}"
         if not os.path.exists(new_path):
             os.makedirs(new_path)
         save_path = new_path
+
         # Set the approximation parameters
         eq = self.equation
         eq_name = eq.__class__.__name__
-        eq_dim=eq.n_input-1
+        eq_dim = eq.n_input - 1
         geom = eq.geometry()
-        _,data_boundary=eq.generate_data(1,200)
+
+        # Generate boundary data (assuming needed for GPsolver)
+        _, data_boundary = eq.generate_data(1, 2000)
+
+        # Define the sampling methods (e.g., Latin Hypercube Sampling)
         random_methods = ["LHS"]
+
         for random_method in random_methods:
             errors_list = []
-            for index,sample_size in enumerate(sample_sizes):
-                errors = np.zeros(sample_size)  # errors: ndarray, shape: (sample_size,), dtype: float
 
-                # Compute the errors
-                xt_values = geom.random_points(sample_size,random=random_method)  # xt_values: ndarray, shape: (sample_size, n_input), dtype: float
-                exact_sol = eq.exact_solution(xt_values)  # exact_sol: ndarray, shape: (n_samples,), dtype: float
+            # Step 1: Generate a fixed test dataset
+            test_sample_size = 1000  # Fixed size for test data
+            test_xt_values = geom.random_points(test_sample_size, random=random_method)  # Fixed test inputs
+            test_exact_sol = eq.exact_solution(test_xt_values)  # Fixed test outputs
 
-                # Measure the evaluation_number for solver1
-                if index == 0:
-                    sol1 = self.solver1.GPsolver(xt_values, data_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
-                else:
-                    sol1 = self.solver1.predict(xt_values)  # sol1: ndarray, shape: (num_domain,), dtype: float
+            for index, sample_size in enumerate(sample_sizes):
+                # Step 2: Generate training data of the current sample size
+                training_sample_size = sample_size
+                training_xt_values = geom.random_points(training_sample_size, random=random_method)  # Training inputs
+                training_exact_sol = eq.exact_solution(training_xt_values)  # Training outputs
 
-                # Compute the errors
-                errors=np.abs(sol1 - exact_sol)
+                # Step 3: Train or update the GP model
+                self.solver1.GPsolver(training_xt_values, data_boundary)
+                # Step 4: Predict on the fixed test dataset
+                sol1 = self.solver1.predict(test_xt_values)  # Predictions on test data
 
-                # Compute the mean errors
-                errors_list.append(np.mean(errors))
-            
-            epsilon = 1e-10
-            # Convert lists to arrays
-            sample_sizes_array = np.array(sample_sizes)  # sample_sizes_array: ndarray, shape: (len(sample_sizes),), dtype: int
-            errors_array = np.array(errors_list)  # errors_array: ndarray, shape: (len(sample_sizes),), dtype: float
+                # Step 5: Compute the errors between predictions and exact solutions
+                errors = np.abs(sol1 - test_exact_sol)
 
-            
-        # Plot the convergence rate for GP
-        plt.figure()
+                # Step 6: Compute the mean absolute error and store it
+                mean_error = np.mean(errors)
+                errors_list.append(mean_error)
 
-        # Plot the original data without taking the logarithm
-        plt.plot(sample_sizes_array + epsilon, errors_array + epsilon, label='GP')
+                print(f"Sample Size: {sample_size}, Mean Absolute Error: {mean_error}")
 
-        # Define the reference point for calculating slopes
-        x0 = sample_sizes_array[0] + epsilon
-        y0 = errors_array[0] + epsilon
+            # Convert lists to numpy arrays for plotting
+            sample_sizes_array = np.array(sample_sizes)  # Shape: (len(sample_sizes),)
+            errors_array = np.array(errors_list)        # Shape: (len(sample_sizes),)
+            epsilon = 1e-10  # To avoid log(0)
 
-        # Calculate slope lines based on theoretical convergence rates
-        # For slope = -1/2: error = C * (sample_size)^(-1/2)
-        C1_2 = y0 * (x0 ** 0.5)
-        slope_1_2 = C1_2 * (sample_sizes_array + epsilon) ** (-0.5)
+            # Step 7: Plot the convergence rate for GP
+            plt.figure(figsize=(8, 6))
 
-        # For slope = -1/4: error = C * (sample_size)^(-1/4)
-        C1_4 = y0 * (x0 ** 0.25)
-        slope_1_4 = C1_4 * (sample_sizes_array + epsilon) ** (-0.25)
+            # Plot the original data
+            plt.plot(sample_sizes_array + epsilon, errors_array + epsilon, marker='x', linestyle='-', label='GP')
 
-        # Plot the slope lines
-        plt.plot(sample_sizes_array + epsilon, slope_1_2, label='slope=-1/2')
-        plt.plot(sample_sizes_array + epsilon, slope_1_4, label='slope=-1/4')
+            # Define the reference point for calculating slopes
+            x0 = sample_sizes_array[0] + epsilon
+            y0 = errors_array[0] + epsilon
 
-        # Add scatter markers for the original data and slope lines
-        plt.scatter(sample_sizes_array + epsilon, errors_array + epsilon, marker='x')
-        plt.scatter(sample_sizes_array + epsilon, slope_1_2, marker='x')
-        plt.scatter(sample_sizes_array + epsilon, slope_1_4, marker='x')
+            # Calculate slope lines based on theoretical convergence rates
+            # For slope = -1/2: error = C * (sample_size)^(-1/2)
+            C1_2 = y0 * (x0 ** 0.5)
+            slope_1_2 = C1_2 * (sample_sizes_array + epsilon) ** (-0.5)
 
-        # Set plot titles and labels
-        plt.title(f'GP - Sample Rate {random_method}')
-        plt.xlabel('Sample Size')
-        plt.ylabel('Error')
+            # For slope = -1/4: error = C * (sample_size)^(-1/4)
+            C1_4 = y0 * (x0 ** 0.25)
+            slope_1_4 = C1_4 * (sample_sizes_array + epsilon) ** (-0.25)
 
-        # Apply logarithmic scales to both axes
-        plt.xscale('log')
-        plt.yscale('log')
+            # Plot the slope reference lines
+            plt.plot(sample_sizes_array + epsilon, slope_1_2, linestyle='--', label='Slope = -1/2')
+            plt.plot(sample_sizes_array + epsilon, slope_1_4, linestyle='--', label='Slope = -1/4')
 
-        # Add legend to distinguish between plots
-        plt.legend()
+            # Scatter markers for data points and slope lines
+            plt.scatter(sample_sizes_array + epsilon, errors_array + epsilon, marker='x', color='blue')
+            plt.scatter(sample_sizes_array + epsilon, slope_1_2, marker='o', color='orange')
+            plt.scatter(sample_sizes_array + epsilon, slope_1_4, marker='^', color='green')
 
-        # Save the plot to the specified path
-        plt.savefig(f'{save_path}/GP_sample_rate_{random_method}.png')
+            # Set plot titles and labels
+            plt.title(f'GP Convergence Rate - Sampling Method: {random_method}')
+            plt.xlabel('Training Sample Size')
+            plt.ylabel('Mean Absolute Error on Test Set')
 
-        # Log the plot using Weights & Biases (wandb)
-        wandb.log({f'GP_sample_rate_{random_method}': plt})
-            
-        
+            # Apply logarithmic scales to both axes
+            plt.xscale('log')
+            plt.yscale('log')
+
+            # Add legend to distinguish between plots
+            plt.legend()
+            plt.grid(True, which="both", ls="--", linewidth=0.5)
+
+            # Save the plot to the specified path
+            plot_filename = f'GP_convergence_rate_{random_method}.png'
+            plt.savefig(os.path.join(save_path, plot_filename))
+            plt.close()
+
+            # Log the plot using Weights & Biases (wandb) if required
+            # Initialize wandb run if not already done
+            # wandb.init(project='gprate', name='convergence_rate')
+            # wandb.log({f'GP_convergence_rate_{random_method}': wandb.Image(os.path.join(save_path, plot_filename))})
+            # wandb.finish()
+
+            print(f"Convergence plot saved to {os.path.join(save_path, plot_filename)}")
+
+        # Disable the profiler and print stats
+        profiler.disable()
+        profiler.print_stats(sort='cumtime')
+
         return 0

@@ -3,6 +3,8 @@ import numpy as np
 import deepxde as dde
 import torch.nn as nn
 from scipy.special import lambertw
+
+
 class MLP_full_history(object):
     '''Multilevel Picard Iteration for high dimensional semilinear PDE'''
     #all the vectors uses rows as index and columns as dimensions
@@ -126,6 +128,7 @@ class MLP_full_history(object):
         
         # Generate Monte Carlo samples for backward Euler
         W = np.sqrt(T-t)[:, np.newaxis, np.newaxis] * np.random.normal(size=(batch_size, MC, dim))  # Brownian increments, shape (batch_size, MC, dim)
+        self.evaluation_counter+=MC
         X = np.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC, dim)
         disturbed_X = X + mu*(T-t)[:, np.newaxis, np.newaxis]+ sigma * W  # Disturbed spatial coordinates, shape (batch_size, MC, dim)
         
@@ -161,6 +164,7 @@ class MLP_full_history(object):
             simulated = np.zeros((batch_size, MC, dim + 1))  # Initialize array for simulated values, shape (batch_size, MC, dim + 1)
         
             dW =np.sqrt(sampled_time_steps) * np.random.normal(size=(batch_size, MC, dim))  # Brownian increments for current time step, shape (batch_size, MC, dim)
+            self.evaluation_counter+=MC*dim
             W += dW  # Accumulate Brownian increments
             X += mu*(sampled_time_steps)+sigma * dW  # Update spatial coordinates
             co_solver_l = lambda X_t: self.uz_solve(n=l, rho=rho, x_t=X_t)  # Co-solver for level l

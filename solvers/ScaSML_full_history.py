@@ -3,6 +3,8 @@ import numpy as np
 import deepxde as dde
 import torch.nn as nn
 from scipy.special import lambertw
+import jax.numpy as jnp
+from jax import random
 
 class ScaSML_full_history(object):
     '''Multilevel Picard Iteration calibrated GP for high dimensional semilinear PDE'''
@@ -46,15 +48,15 @@ class ScaSML_full_history(object):
         self.evaluation_counter+=1
         u_hat = self.GP.predict(x_t)
         grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:,:-1]
-        # compute PDE loss
-        epsilon = self.GP.compute_PDE_loss(x_t)
+        # # compute PDE loss
+        # epsilon = self.GP.compute_PDE_loss(x_t)
         # Calculate the values for the generator function
         '''TO DO: should we multiply z_breve with sigma(x_t) or not?'''
         '''Personally, I think we should, since the W in the algorithm is not multiplied by sigma.'''
         val1 = eq.f(x_t, u_breve + u_hat, eq.sigma(x_t) * (grad_u_hat_x+ z_breve))
         val2 = eq.f(x_t, u_hat, eq.sigma(x_t) * grad_u_hat_x)
-        # return val1 - val2 #light version
-        return val1-val2+epsilon #large version
+        return val1 - val2 #light version
+        # return val1-val2+epsilon #large version
     
     def g(self, x_t):
         '''
@@ -166,7 +168,6 @@ class ScaSML_full_history(object):
         z = np.sum(differences * W, axis=1) / (MC * delta_t)  # Compute z values, shape (batch_size, dim)        
         # Recursive call for n > 0
         if n == 0:
-            _, temp_boundary = eq.generate_data(1, 200)
             batch_size=x_t.shape[0]
             u_hat = self.GP.predict(x_t)
             grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:, :-1]   
@@ -183,9 +184,11 @@ class ScaSML_full_history(object):
             sampled_time_steps = (tau * (T-t)[:, np.newaxis]).reshape((batch_size, MC, 1))  # Sample time steps, shape (batch_size, MC)
             X = np.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC, dim)
             W = np.zeros((batch_size, MC, dim))  # Initialize Brownian increments, shape (batch_size, MC, dim)
+            self.evaluation_counter+=MC
             simulated = np.zeros((batch_size, MC, dim + 1))  # Initialize array for simulated values, shape (batch_size, MC, dim + 1)
         
             dW =np.sqrt(sampled_time_steps) * np.random.normal(size=(batch_size, MC, dim))  # Brownian increments for current time step, shape (batch_size, MC, dim)
+            self.evaluation_counter+=MC*dim
             W += dW  # Accumulate Brownian increments
             X += mu*(sampled_time_steps)+sigma * dW  # Update spatial coordinates
             co_solver_l = lambda X_t: self.uz_solve(n=l, rho=rho, x_t=X_t)  # Co-solver for level l

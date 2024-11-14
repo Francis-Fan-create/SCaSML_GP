@@ -2,6 +2,7 @@ import deepxde as dde
 # import numpy as np
 import torch
 import numpy as np
+import jax.numpy as jnp
 
 import sys
 import os
@@ -194,80 +195,6 @@ class Equation(object):
             NotImplementedError: This is a placeholder method.
         """
         raise NotImplementedError
-        
-    def terminal_condition(self):
-        """
-        Terminal condition of the PDE, using hard constraint.
-        
-        Returns:
-            dde.icbc.PointSetBC: The terminal condition boundary condition object.
-            
-        Raises:
-            NotImplementedError: If the terminal_constraint or geometry method is not implemented.
-        """
-        if hasattr(self, 'terminal_constraint') and hasattr(self, 'geometry'):
-            # use PointSetBC to enforce soft terminal condition
-            # generate terminal point
-            x = self.geomx.random_points(500)  # do not use uniform !!!
-            t = self.T * np.ones((500, 1))
-            my_data = np.concatenate((x, t), axis=1)
-            self.my_data = my_data
-            tc = dde.icbc.PointSetBC(my_data, self.terminal_constraint(my_data), 0)  # need to be enforced on generate_data method
-            self.tc = tc
-            return tc
-        else:
-            raise NotImplementedError
-
-    def initial_condition(self):
-        """
-        Initial condition of the PDE, using soft constraint.
-        
-        Returns:
-            dde.icbc.DirichletBC: The boundary condition object.
-            
-        Raises:
-            NotImplementedError: If the boundary_constraint or geometry method is not implemented.
-        """
-        if hasattr(self, 'initial_constraint') and hasattr(self, 'geometry'):
-            ic = dde.icbc.IC(self.geometry(), self.initial_constraint, lambda _, on_initial: on_initial)  # need to be enforced on generate_data method
-            self.ic = ic
-            return ic
-        else:
-            raise NotImplementedError
-
-    def Dirichlet_boundary_condition(self):
-        """
-        Dirichlet boundary condition of the PDE, using soft constraint.
-        
-        Returns:
-            dde.icbc.DirichletBC: The boundary condition object.
-            
-        Raises:
-            NotImplementedError: If the boundary_constraint or geometry method is not implemented.
-        """
-        if hasattr(self, 'Dirichlet_boundary_constraint') and hasattr(self, 'geometry'):
-            D_bc = dde.icbc.DirichletBC(self.geometry(), self.Dirichlet_boundary_constraint, lambda _, on_boundary: on_boundary)  # need to be enforced on generate_data method
-            self.D_bc = D_bc
-            return D_bc
-        else:
-            raise NotImplementedError
-
-    def Neumann_boundary_condition(self):
-        """
-        Neumann boundary condition of the PDE, using soft constraint.
-        
-        Returns:
-            dde.icbc.NeumannBC: The boundary condition object.
-            
-        Raises:
-            NotImplementedError: If the boundary_constraint or geometry method is not implemented.
-        """
-        if hasattr(self, 'Neumann_boundary_constraint') and hasattr(self, 'geometry'):
-            N_bc = dde.icbc.NeumannBC(self.geometry(), self.Neumann_boundary_constraint, lambda _, on_boundary: on_boundary)  # need to be enforced on generate_data method
-            self.N_bc = N_bc
-            return N_bc
-        else:
-            raise NotImplementedError
     
     def generate_data(self):
         """
@@ -397,7 +324,6 @@ class Explicit_Solution_Example(Equation):
         - data (dde.data.TimePDE): A TimePDE object containing the training data.
         '''
         geom=self.geometry() # Defines the geometry of the domain.
-        self.terminal_condition() # Generates terminal condition.
         data1 = geom.random_points(num_domain) # Generates random points in the domain.
         data2 = geom.random_boundary_points(num_boundary) # Generates random points on the boundary.
         return data1,data2
@@ -519,7 +445,6 @@ class Complicated_HJB(Equation):
         - data (dde.data.TimePDE): A TimePDE object containing the training data.
         '''
         geom=self.geometry() # Defines the geometry of the domain.
-        self.terminal_condition() # Generates terminal condition.
         data1 = geom.random_points(num_domain) # Generates random points in the domain.
         data2 = geom.random_boundary_points(num_boundary) # Generates random points on the boundary.  
         return data1,data2
