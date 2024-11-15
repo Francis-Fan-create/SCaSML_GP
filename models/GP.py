@@ -413,48 +413,48 @@ class GP(object):
         
         return loss  # Return as a JAX scalar
     
-    def Hessian_GN(self, sol, rhs_f, bdy_g, L):
-        '''Compute the Hessian of the loss function for the Gaussian process'''
-        DF_domain_without_time = self.DF_domain_without_time(sol)
-        # Compute the Hessian
-        hess = jnp.zeros((self.phi_dim,3*self.N_domain)) # Here we compue the Hessian only w.r.t. z_1,z_3,z_5
-        hess = hess.at[:self.N_domain, :self.N_domain].set(jnp.eye(self.N_domain))
-        hess = hess.at[self.N_domain + self.N_boundary:2 * self.N_domain + self.N_boundary, self.N_domain:2 * self.N_domain].set(jnp.eye(self.N_domain))
-        hess = hess.at[2 * self.N_domain + self.N_boundary:3 * self.N_domain + self.N_boundary, :].set(DF_domain_without_time)
-        hess = hess.at[3 * self.N_domain + self.N_boundary:4 * self.N_domain + self.N_boundary, 2 * self.N_domain:].set(jnp.eye(self.N_domain))
-        # Compute the result
-        ss = jnp.linalg.solve(L,hess)
-        result = 2*jnp.matmul(ss.T,ss)
-        return result
+    # def Hessian_GN(self, sol, rhs_f, bdy_g, L):
+    #     '''Compute the Hessian of the loss function for the Gaussian process'''
+    #     DF_domain_without_time = self.DF_domain_without_time(sol)
+    #     # Compute the Hessian
+    #     hess = jnp.zeros((self.phi_dim,3*self.N_domain)) # Here we compue the Hessian only w.r.t. z_1,z_3,z_5
+    #     hess = hess.at[:self.N_domain, :self.N_domain].set(jnp.eye(self.N_domain))
+    #     hess = hess.at[self.N_domain + self.N_boundary:2 * self.N_domain + self.N_boundary, self.N_domain:2 * self.N_domain].set(jnp.eye(self.N_domain))
+    #     hess = hess.at[2 * self.N_domain + self.N_boundary:3 * self.N_domain + self.N_boundary, :].set(DF_domain_without_time)
+    #     hess = hess.at[3 * self.N_domain + self.N_boundary:4 * self.N_domain + self.N_boundary, 2 * self.N_domain:].set(jnp.eye(self.N_domain))
+    #     # Compute the result
+    #     ss = jnp.linalg.solve(L,hess)
+    #     result = 2*jnp.matmul(ss.T,ss)
+    #     return result
 
-    def compare_hessians(self, sol, rhs_f, bdy_g, L):
-        custom_hessian = self.Hessian_GN(sol, rhs_f, bdy_g, L)
-        jax_hessian = hessian(self.loss_function, argnums=0)(sol, rhs_f, bdy_g, L)
-        difference = jnp.linalg.norm(custom_hessian - jax_hessian)
-        print(f"Hessian difference norm: {difference}")
-        return difference
+    # def compare_hessians(self, sol, rhs_f, bdy_g, L):
+    #     custom_hessian = self.Hessian_GN(sol, rhs_f, bdy_g, L)
+    #     jax_hessian = hessian(self.loss_function, argnums=0)(sol, rhs_f, bdy_g, L)
+    #     difference = jnp.linalg.norm(custom_hessian - jax_hessian)
+    #     print(f"Hessian difference norm: {difference}")
+    #     return difference
     
-    def numerical_gradient(self, sol, rhs_f, bdy_g, L, epsilon=1e-5):
-        numerical_grad = jnp.zeros_like(sol)
-        for i in range(sol.size):
-            sol_plus = sol.at[i].add(epsilon)
-            sol_minus = sol.at[i].add(-epsilon)
-            loss_plus = self.loss_function(sol_plus, rhs_f, bdy_g, L)
-            loss_minus = self.loss_function(sol_minus, rhs_f, bdy_g, L)
-            numerical_grad = numerical_grad.at[i].set((loss_plus - loss_minus) / (2 * epsilon))
-        return numerical_grad
+    # def numerical_gradient(self, sol, rhs_f, bdy_g, L, epsilon=1e-5):
+    #     numerical_grad = jnp.zeros_like(sol)
+    #     for i in range(sol.size):
+    #         sol_plus = sol.at[i].add(epsilon)
+    #         sol_minus = sol.at[i].add(-epsilon)
+    #         loss_plus = self.loss_function(sol_plus, rhs_f, bdy_g, L)
+    #         loss_minus = self.loss_function(sol_minus, rhs_f, bdy_g, L)
+    #         numerical_grad = numerical_grad.at[i].set((loss_plus - loss_minus) / (2 * epsilon))
+    #     return numerical_grad
     
-    def test_gradients(self, sol, rhs_f, bdy_g, L):
-        analytical_grad = grad(self.loss_function)(sol, rhs_f, bdy_g, L)
-        numerical_grad = self.numerical_gradient(sol, rhs_f, bdy_g, L)
-        diff = jnp.linalg.norm(analytical_grad - numerical_grad)
-        print(f"Gradient difference norm: {diff}")
-        if diff < 1e-4:
-            print("Gradients are correct.")
-        else:
-            print("Gradients mismatch. Review loss_function and Hessian_GN.")
+    # def test_gradients(self, sol, rhs_f, bdy_g, L):
+    #     analytical_grad = grad(self.loss_function)(sol, rhs_f, bdy_g, L)
+    #     numerical_grad = self.numerical_gradient(sol, rhs_f, bdy_g, L)
+    #     diff = jnp.linalg.norm(analytical_grad - numerical_grad)
+    #     print(f"Gradient difference norm: {diff}")
+    #     if diff < 1e-4:
+    #         print("Gradients are correct.")
+    #     else:
+    #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=20):
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=100):
         '''Solve the Gaussian process using Gauss-Newton method'''
         rhs_f = self.rhs_f(x_t_domain)
         bdy_g = self.bdy_g(x_t_boundary)
@@ -476,25 +476,26 @@ class GP(object):
             grad_norm = jnp.linalg.norm(gradient)
             print(f"Iteration {iter_step}: Gradient norm = {grad_norm}")
     
-            # Validate Hessian
-            difference = self.compare_hessians(sol, rhs_f, bdy_g, L)
-            if difference > 1e-3:
-                print(f"Significant Hessian discrepancy detected: {difference}")
+            # # Validate Hessian
+            # difference = self.compare_hessians(sol, rhs_f, bdy_g, L)
+            # if difference > 1e-3:
+            #     print(f"Significant Hessian discrepancy detected: {difference}")
     
             # Compute Hessian
-            hessian = self.Hessian_GN(sol, rhs_f, bdy_g, L)
+            # Hessian = self.Hessian_GN(sol, rhs_f, bdy_g, L)
+            Hessian = hessian(self.loss_function, argnums=0)(sol, rhs_f, bdy_g, L)
             
             # Regularize Hessian
             epsilon = 1e-4  # Increased regularization
-            hessian += epsilon * jnp.eye(hessian.shape[0])
+            Hessian += epsilon * jnp.eye(Hessian.shape[0])
     
             # Check condition number
-            cond_num = jnp.linalg.cond(hessian)
+            cond_num = jnp.linalg.cond(Hessian)
             print(f"Iteration {iter_step}: Hessian condition number = {cond_num}")
     
             # Solve for the update step
             try:
-                temp = jnp.linalg.solve(hessian, gradient)
+                temp = jnp.linalg.solve(Hessian, gradient)
             except jnp.linalg.LinAlgError as e:
                 print(f"LinAlgError during Hessian inversion: {e}")
                 break
@@ -525,8 +526,8 @@ class GP(object):
             print(f"iter = {iter_step}, Gauss-Newton step size = {alpha}, loss = {J_now}")
             print(f"Iteration {iter_step}: Hessian condition number = {cond_num}")
     
-            # Test gradients
-            self.test_gradients(sol, rhs_f, bdy_g, L)
+            # # Test gradients
+            # self.test_gradients(sol, rhs_f, bdy_g, L)
     
             # Early stopping if gradient norm is small
             if grad_norm < 1e-5:
