@@ -75,10 +75,10 @@ class ScaSML_full_history(object):
         u_hat = self.GP.predict(x_t)
         # tensor_x_t[:, -1] = self.T
         # Calculate the result of the terminal constraint function
-        result = eq.g(x_t) - u_hat[:, 0]
+        result = eq.g(x_t) - u_hat
         # if np.abs(result).any() > 0.5:
         #     print(f'g:{result}')
-        return result
+        return result[:,0]
     
     def approx_parameters(self, rhomax):
         '''

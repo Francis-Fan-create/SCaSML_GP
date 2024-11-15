@@ -204,7 +204,7 @@ class Equation(object):
             NotImplementedError: This is a placeholder method.
         """
         raise NotImplementedError
-    
+
 class Explicit_Solution_Example(Equation):
     '''
     Example of a high-dimensional PDE with an exact solution.
@@ -227,11 +227,12 @@ class Explicit_Solution_Example(Equation):
         - x_t (ndarray): Input tensor of shape (batch_size, n_input), where n_input includes the time dimension.
         
         Returns:
-        - result (ndarray): A 1D tensor of shape (batch_size,), representing the terminal constraint.
+        - result (ndarray): A 2D tensor of shape (batch_size, 1), representing the terminal constraint.
         '''
-        result= 1-1 / (1 + np.exp(x_t[:,-1] + np.sum(x_t[:,:self.n_input-1],axis=1))) # Computes the terminal constraint.
+        result = 1 - 1 / (1 + np.exp(x_t[:, -1] + np.sum(x_t[:, :self.n_input-1], axis=1)))
+        result = result[:, np.newaxis]  # Convert to 2D
         return result 
-
+    
     def mu(self, x_t=0):
         '''
         Returns the drift coefficient of the PDE. Here, it's a constant value.
@@ -256,7 +257,7 @@ class Explicit_Solution_Example(Equation):
         '''
         return 0.25
     
-    def f(self, x_t,u,z):
+    def f(self, x_t, u, z):
         '''
         Defines the generator term for the PDE.
         
@@ -268,10 +269,8 @@ class Explicit_Solution_Example(Equation):
         Returns:
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
-        # div=np.sum(z,axis=1) # Computes the divergence of z.
-        # result=(self.sigma()**2 * u - 1/(self.n_input-1) - self.sigma()**2/2) * div[:,np.newaxis] # Computes the generator term.
-        dim=self.n_input-1
-        result=self.sigma() * (u - (2+self.sigma() * self.sigma() * dim) / (2 * self.sigma() * self.sigma() *dim)) * np.sum(z, axis=1, keepdims=True)
+        dim = self.n_input - 1
+        result = self.sigma() * (u - (2 + self.sigma() ** 2 * dim) / (2 * self.sigma() ** 2 * dim)) * np.sum(z, axis=1, keepdims=True)
         return result
     
     def exact_solution(self, x_t):
@@ -282,16 +281,17 @@ class Explicit_Solution_Example(Equation):
         - x_t (ndarray): Input tensor of shape (batch_size, n_input), where n_input includes the time dimension.
         
         Returns:
-        - result (ndarray): An arrary of shape (batch_size, n_output), representing the exact solution.
+        - result (ndarray): An array of shape (batch_size, 1), representing the exact solution.
         '''
         t = x_t[:, -1]
         x = x_t[:, :-1]
         sum_x = np.sum(x, axis=1)
-        exp_term =np.exp(t + sum_x) # Computes the exponential term of the solution.
-        result=1-1/(1+exp_term) # Computes the exact solution.
+        exp_term = np.exp(t + sum_x)  # Computes the exponential term of the solution.
+        result = 1 - 1 / (1 + exp_term)  # Computes the exact solution.
+        result = result[:, np.newaxis]  # Convert to 2D
         return result
     
-    def geometry(self,t0=0,T=0.5):
+    def geometry(self, t0=0, T=0.5):
         '''
         Defines the geometry of the domain for the PDE.
         
@@ -302,14 +302,14 @@ class Explicit_Solution_Example(Equation):
         Returns:
         - geom (dde.geometry.GeometryXTime): A GeometryXTime object representing the domain.
         '''
-        self.t0=t0
-        self.T=T
-        spacedomain = dde.geometry.Hypercube([-0.5]*(self.n_input-1), [0.5]*(self.n_input-1)) # Defines the spatial domain, for train
+        self.t0 = t0
+        self.T = T
+        spacedomain = dde.geometry.Hypercube([-0.5] * (self.n_input - 1), [0.5] * (self.n_input - 1))  # Defines the spatial domain, for train
         # spacedomain = dde.geometry.Hypercube([-0.1]*(self.n_input-1), [0.1]*(self.n_input-1)) # Defines the spatial domain , for test
-        timedomain = dde.geometry.TimeDomain(t0, T) # Defines the time domain.
-        geom = dde.geometry.GeometryXTime(spacedomain, timedomain) # Combines spatial and time domains.
-        self.geomx=spacedomain
-        self.geomt=timedomain
+        timedomain = dde.geometry.TimeDomain(t0, T)  # Defines the time domain.
+        geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
+        self.geomx = spacedomain
+        self.geomt = timedomain
         return geom
     
     def generate_data(self, num_domain=100, num_boundary=20):
@@ -321,13 +321,13 @@ class Explicit_Solution_Example(Equation):
         - num_boundary (int): Number of points to sample on the boundary.
         
         Returns:
-        - data (dde.data.TimePDE): A TimePDE object containing the training data.
+        - data (tuple): A tuple containing domain points and boundary points.
         '''
-        geom=self.geometry() # Defines the geometry of the domain.
-        data1 = geom.random_points(num_domain) # Generates random points in the domain.
-        data2 = geom.random_boundary_points(num_boundary) # Generates random points on the boundary.
-        return data1,data2
-    
+        geom = self.geometry()  # Defines the geometry of the domain.
+        data1 = geom.random_points(num_domain)  # Generates random points in the domain.
+        data2 = geom.random_boundary_points(num_boundary)  # Generates random points on the boundary.
+        return data1, data2
+
 class Complicated_HJB(Equation):
     '''
     Complicated HJB equation.
@@ -350,13 +350,14 @@ class Complicated_HJB(Equation):
         - x_t (ndarray): Input tensor of shape (batch_size, n_input), where n_input includes the time dimension.
         
         Returns:
-        - result (ndarray): A 1D tensor of shape (batch_size,), representing the terminal constraint.
+        - result (ndarray): A 2D tensor of shape (batch_size, 1), representing the terminal constraint.
         '''
-        x=x_t[:,:self.n_input-1] # Extracts the spatial coordinates.
-        sum_x=np.sum(x,axis=1) # Computes the sum of spatial coordinates.
-        result=sum_x # Computes the terminal constraint.
+        x = x_t[:, :self.n_input - 1]  # Extracts the spatial coordinates.
+        sum_x = np.sum(x, axis=1)  # Computes the sum of spatial coordinates.
+        result = sum_x  # Computes the terminal constraint.
+        result = result[:, np.newaxis]  # Convert to 2D
         return result 
-
+    
     def mu(self, x_t=0):
         '''
         Returns the drift coefficient of the PDE. Here, it's a constant value.
@@ -367,8 +368,8 @@ class Complicated_HJB(Equation):
         Returns:
         - (float): The drift coefficient.
         '''
-        dim=self.n_input-1
-        return -1/dim
+        dim = self.n_input - 1
+        return -1 / dim
     
     def sigma(self, x_t=0):
         '''
@@ -382,7 +383,7 @@ class Complicated_HJB(Equation):
         '''
         return np.sqrt(2)
     
-    def f(self, x_t,u,z):
+    def f(self, x_t, u, z):
         '''
         Defines the generator term for the PDE.
         
@@ -394,7 +395,7 @@ class Complicated_HJB(Equation):
         Returns:
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
-        return np.sqrt(2)*np.ones_like(u)
+        return np.sqrt(2) * np.ones_like(u)  # Shape: (batch_size, n_output)
     
     def exact_solution(self, x_t):
         '''
@@ -404,15 +405,16 @@ class Complicated_HJB(Equation):
         - x_t (ndarray): Input tensor of shape (batch_size, n_input), where n_input includes the time dimension.
         
         Returns:
-        - result (ndarray): An arrary of shape (batch_size, ), representing the exact solution.
+        - result (ndarray): An array of shape (batch_size, 1), representing the exact solution.
         '''
         t = x_t[:, -1]
         x = x_t[:, :-1]
         sum_x = np.sum(x, axis=1)
-        result=sum_x+(self.T-t)
+        result = sum_x + (self.T - t)
+        result = result[:, np.newaxis]  # Convert to 2D
         return result
     
-    def geometry(self,t0=0,T=0.5):
+    def geometry(self, t0=0, T=0.5):
         '''
         Defines the geometry of the domain for the PDE.
         
@@ -423,14 +425,14 @@ class Complicated_HJB(Equation):
         Returns:
         - geom (dde.geometry.GeometryXTime): A GeometryXTime object representing the domain.
         '''
-        self.t0=t0
-        self.T=T
-        spacedomain = dde.geometry.Hypercube([-0.5]*(self.n_input-1), [0.5]*(self.n_input-1)) # Defines the spatial domain, for train
+        self.t0 = t0
+        self.T = T
+        spacedomain = dde.geometry.Hypercube([-0.5] * (self.n_input - 1), [0.5] * (self.n_input - 1))  # Defines the spatial domain, for train
         # spacedomain = dde.geometry.Hypercube([-0.1]*(self.n_input-1), [0.1]*(self.n_input-1)) # Defines the spatial domain , for test
-        timedomain = dde.geometry.TimeDomain(t0, T) # Defines the time domain.
-        geom = dde.geometry.GeometryXTime(spacedomain, timedomain) # Combines spatial and time domains.
-        self.geomx=spacedomain
-        self.geomt=timedomain
+        timedomain = dde.geometry.TimeDomain(t0, T)  # Defines the time domain.
+        geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
+        self.geomx = spacedomain
+        self.geomt = timedomain
         return geom
     
     def generate_data(self, num_domain=100, num_boundary=20):
@@ -442,9 +444,9 @@ class Complicated_HJB(Equation):
         - num_boundary (int): Number of points to sample on the boundary.
         
         Returns:
-        - data (dde.data.TimePDE): A TimePDE object containing the training data.
+        - data (tuple): A tuple containing domain points and boundary points.
         '''
-        geom=self.geometry() # Defines the geometry of the domain.
-        data1 = geom.random_points(num_domain) # Generates random points in the domain.
-        data2 = geom.random_boundary_points(num_boundary) # Generates random points on the boundary.  
-        return data1,data2
+        geom = self.geometry()  # Defines the geometry of the domain.
+        data1 = geom.random_points(num_domain)  # Generates random points in the domain.
+        data2 = geom.random_boundary_points(num_boundary)  # Generates random points on the boundary.
+        return data1, data2

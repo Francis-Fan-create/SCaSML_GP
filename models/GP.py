@@ -386,7 +386,7 @@ class GP(object):
     
     def bdy_g(self, x_t_boundary):
         '''Compute the boundary condition g at x_t_boundary'''
-        return self.equation.g(x_t_boundary)
+        return self.equation.g(x_t_boundary)[:,0]
     
     def time_der_rep(self, sol, rhs_f):
         '''Compute the time derivative representation on sol'''
@@ -454,7 +454,7 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=100):
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=50):
         '''Solve the Gaussian process using Gauss-Newton method'''
         rhs_f = self.rhs_f(x_t_domain)
         bdy_g = self.bdy_g(x_t_boundary)
@@ -546,7 +546,8 @@ class GP(object):
         right_vector = jnp.linalg.solve(kernel_phi_phi_perturb, z)
         self.right_vector = right_vector[:, jnp.newaxis]
     
-        sol_on_domain = z_1[:, jnp.newaxis]
+        sol_on_domain = self.predict(x_t_domain)
+        
         return sol_on_domain
     
     def predict(self, x_t_infer):

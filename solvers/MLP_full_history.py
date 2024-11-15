@@ -60,7 +60,7 @@ class MLP_full_history(object):
         # self.evaluation_counter+=batch_size
         self.evaluation_counter+=1
         eq = self.equation
-        return eq.g(x_t)
+        return eq.g(x_t)[:,0]
 
     def approx_parameters(self, rhomax):
         '''
