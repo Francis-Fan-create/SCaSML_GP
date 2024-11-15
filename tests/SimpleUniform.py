@@ -7,6 +7,7 @@ import sys
 import os
 import cProfile
 import shutil
+import jax.numpy as jnp
 
 class SimpleUniform(object):
     '''

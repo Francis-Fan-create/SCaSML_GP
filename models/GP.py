@@ -22,7 +22,7 @@ class GP(object):
         self.n_output = equation.n_output  # Number of output features
         self.d= self.n_input-1 # Number of spatial dimensions
         self.sigma= equation.sigma()*jnp.sqrt(self.d) # Standard deviation for Gaussian kernel
-        self.nugget = 1e-5  # Regularization parameter to ensure numerical stability
+        self.nugget = 1e-2  # Regularization parameter to ensure numerical stability
     
     def kappa(self,x_t,y_t):
         '''Compute the kernel entry K(x_t,y_t) for single vector x_t and y_t'''
@@ -130,16 +130,14 @@ class GP(object):
     def kernel_phi_phi(self, x_t_domain, x_t_boundary):
         '''Compute the kernel matrix K(phi, phi)'''
         N_domain = x_t_domain.shape[0]
+        self.N_domain = N_domain
         N_boundary = x_t_boundary.shape[0]
+        self.N_boundary = N_boundary
         phi_dim = 4 * N_domain + N_boundary
+        self.phi_dim = phi_dim
 
-        # Prepare combined arrays for domain and boundary points
-        x_t_all = jnp.concatenate([x_t_domain, x_t_boundary], axis=0)
-
-        # Index mapping functions
-        def idx_laplacian(n): return N_domain + N_boundary + n
-        def idx_dt(n): return 2 * N_domain + N_boundary + n
-        def idx_div(n): return 3 * N_domain + N_boundary + n
+        self.x_t_domain = x_t_domain
+        self.x_t_boundary = x_t_boundary
 
         # Compute kernel blocks using vectorization
         # K11: Kernel between x_t_domain and x_t_domain using kappa
@@ -223,6 +221,11 @@ class GP(object):
         ])
         eigen_nugget = eigen_nugget / trace_laplacian
         kernel_phi_phi_perturb = kernel_phi_phi + jnp.diag(eigen_nugget)
+        # Compute the Cholesky decomposition
+        cholesky_phi_phi_perturb = jnp.linalg.cholesky(kernel_phi_phi_perturb)
+        if jnp.any(jnp.isnan(cholesky_phi_phi_perturb)):
+            raise ValueError("Cholesky decomposition resulted in NaN values.")
+        self.cholesky_phi_phi_perturb = cholesky_phi_phi_perturb    
 
         return kernel_phi_phi_perturb
     
@@ -296,12 +299,7 @@ class GP(object):
         N_domain = x_t_domain.shape[0]
         N_boundary = x_t_boundary.shape[0]
         col_dim = 4 * N_domain + N_boundary  # Total columns
-    
-        # Precompute indices for convenience
-        idx1 = N_domain
-        idx2 = N_domain + N_boundary
-        idx3 = 2 * N_domain + N_boundary
-        idx4 = 3 * N_domain + N_boundary
+
     
         # Compute blocks using vectorization
         # Block 1: Columns 0 to N_domain - 1
@@ -382,68 +380,173 @@ class GP(object):
     
         return div_x_t_kernel_x_phi
     
-    def y_domain(self,x_t):
-        '''Compute the nonlinear term on the right at x_t'''
+    def rhs_f(self, x_t_domain):
+        '''Compute the right-hand side f at x_t_domain'''
         raise NotImplementedError
     
-    def y_boundary(self,x_t):
-        '''Compute the terminal condition at x_t'''
-        return self.equation.g(x_t)[:,jnp.newaxis]
+    def bdy_g(self, x_t_boundary):
+        '''Compute the boundary condition g at x_t_boundary'''
+        return self.equation.g(x_t_boundary)
+    
+    def time_der_rep(self, sol, rhs_f):
+        '''Compute the time derivative representation on sol'''
+        raise NotImplementedError
+    
+    def DF_domain_without_time(self, sol):
+        '''Compute the derivative of sol'''
+        raise NotImplementedError
     
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_step=13, key=0):
-        '''Solve the Gaussian Process for the given domain and boundary points for linear PDE'''
-        N_domain = x_t_domain.shape[0]
-        N_boundary = x_t_boundary.shape[0]
-        self.x_t_domain = x_t_domain
-        self.x_t_boundary = x_t_boundary
-        self.N_domain = N_domain
-        self.N_boundary = N_boundary
+    def loss_function(self, sol, rhs_f, bdy_g, L):
+        '''Compute the loss function for the Gaussian process'''
+        # Construct feature vector
+        z_1 = sol[:self.N_domain]
+        z_3 = sol[self.N_domain:2*self.N_domain]
+        z_5 = sol[2*self.N_domain:]
+        b = jnp.concatenate([z_1, bdy_g, z_3, self.time_der_rep(sol, rhs_f), z_5], axis=0)  # Shape: (col_dim,)
+        
+        # Solve the linear system
+        half_vector = jnp.linalg.solve(L, b)  # Shape: (col_dim,)
+        
+        # Compute the loss without using .item()
+        loss = jnp.dot(half_vector, half_vector)  # Scalar value
+        
+        return loss  # Return as a JAX scalar
     
-        # Initialize random vector z_k using JAX's random number generator with PRNGKey
-        key = random.PRNGKey(key)
-        z_k = random.uniform(key, shape=(4 * N_domain + N_boundary, 1), minval=-1.0, maxval=1.0)
+    def Hessian_GN(self, sol, rhs_f, bdy_g, L):
+        '''Compute the Hessian of the loss function for the Gaussian process'''
+        DF_domain_without_time = self.DF_domain_without_time(sol)
+        # Compute the Hessian
+        hess = jnp.zeros((self.phi_dim,3*self.N_domain)) # Here we compue the Hessian only w.r.t. z_1,z_3,z_5
+        hess = hess.at[:self.N_domain, :self.N_domain].set(jnp.eye(self.N_domain))
+        hess = hess.at[self.N_domain + self.N_boundary:2 * self.N_domain + self.N_boundary, self.N_domain:2 * self.N_domain].set(jnp.eye(self.N_domain))
+        hess = hess.at[2 * self.N_domain + self.N_boundary:3 * self.N_domain + self.N_boundary, :].set(DF_domain_without_time)
+        hess = hess.at[3 * self.N_domain + self.N_boundary:4 * self.N_domain + self.N_boundary, 2 * self.N_domain:].set(jnp.eye(self.N_domain))
+        # Compute the result
+        ss = jnp.linalg.solve(L,hess)
+        result = 2*jnp.matmul(ss.T,ss)
+        return result
+
+    def compare_hessians(self, sol, rhs_f, bdy_g, L):
+        custom_hessian = self.Hessian_GN(sol, rhs_f, bdy_g, L)
+        jax_hessian = hessian(self.loss_function, argnums=0)(sol, rhs_f, bdy_g, L)
+        difference = jnp.linalg.norm(custom_hessian - jax_hessian)
+        print(f"Hessian difference norm: {difference}")
+        return difference
     
-        # Concatenate y_domain and y_boundary to form the target vector y
-        y = jnp.concatenate((self.y_domain(x_t_domain), self.y_boundary(x_t_boundary)), axis=0)
+    def numerical_gradient(self, sol, rhs_f, bdy_g, L, epsilon=1e-5):
+        numerical_grad = jnp.zeros_like(sol)
+        for i in range(sol.size):
+            sol_plus = sol.at[i].add(epsilon)
+            sol_minus = sol.at[i].add(-epsilon)
+            loss_plus = self.loss_function(sol_plus, rhs_f, bdy_g, L)
+            loss_minus = self.loss_function(sol_minus, rhs_f, bdy_g, L)
+            numerical_grad = numerical_grad.at[i].set((loss_plus - loss_minus) / (2 * epsilon))
+        return numerical_grad
     
-        # Compute the perturbed kernel matrix K_phi_phi
+    def test_gradients(self, sol, rhs_f, bdy_g, L):
+        analytical_grad = grad(self.loss_function)(sol, rhs_f, bdy_g, L)
+        numerical_grad = self.numerical_gradient(sol, rhs_f, bdy_g, L)
+        diff = jnp.linalg.norm(analytical_grad - numerical_grad)
+        print(f"Gradient difference norm: {diff}")
+        if diff < 1e-4:
+            print("Gradients are correct.")
+        else:
+            print("Gradients mismatch. Review loss_function and Hessian_GN.")
+    
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=20):
+        '''Solve the Gaussian process using Gauss-Newton method'''
+        rhs_f = self.rhs_f(x_t_domain)
+        bdy_g = self.bdy_g(x_t_boundary)
+    
+        # Define cost function
         kernel_phi_phi_perturb = self.kernel_phi_phi(x_t_domain, x_t_boundary)
+        sol = random.normal(random.PRNGKey(0), (3 * self.N_domain,)) * 1e-3  # Scaled initialization
+        L = self.cholesky_phi_phi_perturb
     
-        # Define the body function for the Gauss-Newton iteration
-        def body_fun(i, z_k):
-            '''
-            Gauss-Newton iteration body function.
+        J_hist = []
+        J_now = self.loss_function(sol, rhs_f, bdy_g, L)
+        J_hist.append(J_now)
+        print(f"Initial loss: {J_now}")
     
-            Args:
-                i: Iteration index (unused).
-                z_k: Current estimate of z.
+        grad_J = grad(self.loss_function)
     
-            Returns:
-                Updated estimate of z.
-            '''
-            DF_k = self.DF(z_k)
-            # Compute the projected kernel matrix
-            proj_kernel_phi_phi = DF_k @ kernel_phi_phi_perturb @ DF_k.T
-            # Compute the residual
-            residual = y - self.F(z_k) + DF_k @ z_k
-            # Solve for gamma using linear solver
-            gamma = jnp.linalg.solve(proj_kernel_phi_phi, residual)
-            # Update z_k
-            z_k_new = kernel_phi_phi_perturb @ DF_k.T @ gamma
-            return z_k_new
+        for iter_step in range(GN_steps):
+            gradient = grad_J(sol, rhs_f, bdy_g, L)
+            grad_norm = jnp.linalg.norm(gradient)
+            print(f"Iteration {iter_step}: Gradient norm = {grad_norm}")
     
-        # Perform Gauss-Newton iterations using JAX's lax.fori_loop for JIT compatibility
-        z_k = lax.fori_loop(0, GN_step, body_fun, z_k)
+            # Validate Hessian
+            difference = self.compare_hessians(sol, rhs_f, bdy_g, L)
+            if difference > 1e-3:
+                print(f"Significant Hessian discrepancy detected: {difference}")
     
-        # Solve for the right vector using the perturbed kernel matrix
-        right_vector = jnp.linalg.solve(kernel_phi_phi_perturb, z_k)
-        self.right_vector = right_vector
+            # Compute Hessian
+            hessian = self.Hessian_GN(sol, rhs_f, bdy_g, L)
+            
+            # Regularize Hessian
+            epsilon = 1e-4  # Increased regularization
+            hessian += epsilon * jnp.eye(hessian.shape[0])
     
-        # Compute the solution on the domain
-        sol_on_domain = self.kernel_x_t_phi(x_t_domain, x_t_domain, x_t_boundary) @ right_vector
+            # Check condition number
+            cond_num = jnp.linalg.cond(hessian)
+            print(f"Iteration {iter_step}: Hessian condition number = {cond_num}")
+    
+            # Solve for the update step
+            try:
+                temp = jnp.linalg.solve(hessian, gradient)
+            except jnp.linalg.LinAlgError as e:
+                print(f"LinAlgError during Hessian inversion: {e}")
+                break
+    
+            # Adjust step size if necessary
+            alpha = 0.1  # Start with a smaller step size
+            backtracking_factor = 0.5
+            max_backtracking = 10
+            success = False
+    
+            for bt in range(max_backtracking):
+                sol_candidate = sol - alpha * temp
+                loss_candidate = self.loss_function(sol_candidate, rhs_f, bdy_g, L)
+                if loss_candidate < J_now:
+                    success = True
+                    sol = sol_candidate
+                    J_now = loss_candidate
+                    J_hist.append(J_now)
+                    break
+                else:
+                    alpha *= backtracking_factor
+    
+            if not success:
+                print(f"Backtracking failed at iteration {iter_step}")
+                break
+    
+            # Log update details
+            print(f"iter = {iter_step}, Gauss-Newton step size = {alpha}, loss = {J_now}")
+            print(f"Iteration {iter_step}: Hessian condition number = {cond_num}")
+    
+            # Test gradients
+            self.test_gradients(sol, rhs_f, bdy_g, L)
+    
+            # Early stopping if gradient norm is small
+            if grad_norm < 1e-5:
+                print(f"Early stopping at iteration {iter_step} due to small gradient norm.")
+                break
+    
+        self.loss_history = J_hist
+    
+        # Compute the final feature vector z
+        z_1 = sol[:self.N_domain]
+        z_2 = bdy_g
+        z_3 = sol[self.N_domain:2 * self.N_domain]
+        z_5 = sol[2 * self.N_domain:]
+        z_4 = self.time_der_rep(sol, rhs_f)
+        z = jnp.concatenate([z_1, z_2, z_3, z_4, z_5], axis=0)
+        right_vector = jnp.linalg.solve(kernel_phi_phi_perturb, z)
+        self.right_vector = right_vector[:, jnp.newaxis]
+    
+        sol_on_domain = z_1[:, jnp.newaxis]
         return sol_on_domain
-    
     
     def predict(self, x_t_infer):
         '''Predict the solution at x_t_infer'''
@@ -478,58 +581,40 @@ class GP_Complicated_HJB(GP):
         super(GP_Complicated_HJB, self).__init__(equation)
 
     
-    def y_domain(self, x_t):
+    def rhs_f(self, x_t):
         '''Compute the nonlinear term on the right at x_t'''
-        return -2 * jnp.ones((x_t.shape[0], 1), dtype=x_t.dtype)
+        return -2 * jnp.ones((x_t.shape[0]), dtype=x_t.dtype)
 
     
-    def F(self, z):
-        '''Compute the operator F at z'''
+    def time_der_rep(self, sol, rhs_f):
+        '''Compute the operator F at sol'''
         N_domain = self.N_domain
         N_boundary = self.N_boundary
         d = self.d
 
-        z_2 = z[N_domain:N_domain + N_boundary]
-        z_3 = z[N_domain + N_boundary:2 * N_domain + N_boundary]
-        z_4 = z[2 * N_domain + N_boundary:3 * N_domain + N_boundary]
-        z_5 = z[3 * N_domain + N_boundary:]
+        z_3 = sol[N_domain:2 * N_domain]
+        z_5 = sol[2*N_domain:]
 
-        F_domain = z_4 - (1 / d) * z_5 + z_3
-        F_boundary = z_2
-        F = jnp.concatenate([F_domain, F_boundary], axis=0)
-        return F
+        rep_domain = (1 / d) * z_5 - z_3 + rhs_f
+        return rep_domain
 
     
-    def DF(self, z):
-        '''Compute the Jacobian of the operator F at z'''
+    def DF_domain_without_time(self, sol):
+        '''Compute the Jacobian of the operator F at sol'''
         N_domain = self.N_domain
         N_boundary = self.N_boundary
         d = self.d
 
         zeros_nd_nd = jnp.zeros((N_domain, N_domain))
-        zeros_nd_nb = jnp.zeros((N_domain, N_boundary))
         I_nd = jnp.eye(N_domain)
-        I_nb = jnp.eye(N_boundary)
 
-        DF_upper = jnp.hstack([
+        DF_domain_without_time = jnp.hstack([
             zeros_nd_nd,
-            zeros_nd_nb,
-            I_nd,
-            I_nd,
-            (-1 / d) * I_nd
+            -I_nd,
+            (1 / d) * I_nd
         ])
-
-        zeros_nb_nd = jnp.zeros((N_boundary, N_domain))
-        zeros_nb_rest = jnp.zeros((N_boundary, 3 * N_domain))
-
-        DF_lower = jnp.hstack([
-            zeros_nb_nd,
-            I_nb,
-            zeros_nb_rest
-        ])
-
-        DF = jnp.vstack([DF_upper, DF_lower])
-        return DF
+ 
+        return DF_domain_without_time
 
     
     def compute_PDE_loss(self, x_t_infer):
@@ -558,43 +643,37 @@ class GP_Explicit_Solution_Example(GP):
         super(GP_Explicit_Solution_Example, self).__init__(equation)
 
     
-    def y_domain(self, x_t):
+    def rhs_f(self, x_t):
         '''Compute the nonlinear term on the right at x_t'''
-        return jnp.zeros((x_t.shape[0], 1), dtype=x_t.dtype)
+        return jnp.zeros((x_t.shape[0]), dtype=x_t.dtype)
 
     
-    def F(self, z):
-        '''Compute the operator F at z'''
+    def time_der_rep(self, sol , rhs_f):
+        '''Compute the operator F at sol'''
         N_domain = self.N_domain
-        N_boundary = self.N_boundary
         d = self.d
         sigma = self.equation.sigma()
 
         # Extract components from z
-        z_1 = z[:N_domain]  # Shape: (N_domain, 1)
-        z_2 = z[N_domain:N_domain + N_boundary]  # Shape: (N_boundary, 1)
-        z_3 = z[N_domain + N_boundary:2 * N_domain + N_boundary]  # Shape: (N_domain, 1)
-        z_4 = z[2 * N_domain + N_boundary:3 * N_domain + N_boundary]  # Shape: (N_domain, 1)
-        z_5 = z[3 * N_domain + N_boundary:]  # Shape: (N_domain, 1)
+        z_1 = sol[:N_domain]  # Shape: (N_domain, 1)
+        z_3 = sol[N_domain:2 * N_domain]  # Shape: (N_domain, 1)
+        z_5 = sol[2 * N_domain:]  # Shape: (N_domain, 1)
 
         # Compute F components
-        F_domain = z_4 + sigma**2 * z_1 * z_5 - (1 / d + sigma**2 / 2) * z_5 + (sigma**2 / 2) * z_3
-        F_boundary = z_2
+        F_domain =  -sigma**2 * z_1 * z_5 + (1 / d + sigma**2 / 2) * z_5 - (sigma**2 / 2) * z_3 + rhs_f
 
-        # Combine F components
-        F = jnp.concatenate([F_domain, F_boundary], axis=0)
-        return F
+        return F_domain
 
     
-    def DF(self, z):
-        '''Compute the Jacobian of the operator F at z'''
+    def DF_domain_without_time(self, sol):
+        '''Compute the Jacobian of the operator F at sol'''
         N_domain = self.N_domain
         N_boundary = self.N_boundary
         sigma = self.equation.sigma()
         d = self.d
 
-        z_1 = z[:N_domain]
-        z_5 = z[3 * N_domain + N_boundary:]
+        z_1 = sol[:N_domain]
+        z_5 = sol[2 * N_domain:]
 
         # Compute partial derivatives
         DF_z1 = sigma**2 * jnp.diagflat(z_5)
@@ -604,15 +683,10 @@ class GP_Explicit_Solution_Example(GP):
         DF_z5 = sigma**2 * jnp.diagflat(z_1) - (1 / d + sigma**2 / 2) * jnp.eye(N_domain)
 
         # Assemble Jacobian matrix
-        DF_upper = jnp.hstack([DF_z1, DF_z2, DF_z3, DF_z4, DF_z5])
-        DF_lower = jnp.hstack([
-            jnp.zeros((N_boundary, N_domain)),        # ∂F_boundary/∂z_1
-            jnp.eye(N_boundary),                      # ∂F_boundary/∂z_2
-            jnp.zeros((N_boundary, 3 * N_domain))     # ∂F_boundary/∂z_3, ∂F_boundary/∂z_4, ∂F_boundary/∂z_5
-        ])
+        DF_domain_without_time = jnp.hstack([-DF_z1, -DF_z3, -DF_z5])
 
-        DF = jnp.vstack([DF_upper, DF_lower])
-        return DF
+
+        return DF_domain_without_time
 
     
     def compute_PDE_loss(self, x_t_infer):
