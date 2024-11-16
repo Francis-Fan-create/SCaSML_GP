@@ -40,7 +40,7 @@ class GPRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, sample_sizes=range(2000, 6001, 1000)):
+    def test(self, save_path, sample_sizes=range(200, 600, 100)):
         '''
         Compares solvers on different distances on the sphere.
 
@@ -66,7 +66,7 @@ class GPRate(object):
         geom = eq.geometry()
 
         # Generate boundary data (assuming needed for GPsolver)
-        _, data_boundary = eq.generate_data(1, 2000)
+        _, data_boundary = eq.generate_data(1, 50)
 
         # Define the sampling methods (e.g., Latin Hypercube Sampling)
         random_methods = ["LHS"]

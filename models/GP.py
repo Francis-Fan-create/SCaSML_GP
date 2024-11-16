@@ -233,7 +233,7 @@ class GP(object):
         eigen_nugget = eigen_nugget / trace_laplacian
         kernel_phi_phi_perturb = kernel_phi_phi + jnp.diag(eigen_nugget)
         # Compute the Cholesky decomposition
-        cholesky_phi_phi_perturb = jnp.linalg.cholesky(kernel_phi_phi_perturb)
+        cholesky_phi_phi_perturb = jnp.linalg.cholesky(kernel_phi_phi_perturb+jnp.eye(phi_dim)*self.nugget)
         if jnp.any(jnp.isnan(cholesky_phi_phi_perturb)):
             raise ValueError("Cholesky decomposition resulted in NaN values.")
         self.cholesky_phi_phi_perturb = cholesky_phi_phi_perturb    
