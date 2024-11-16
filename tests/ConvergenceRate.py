@@ -44,7 +44,7 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=5, n_samples=50):
+    def test(self, save_path, rhomax=5, n_samples=500):
         '''
         Compares solvers on different distances on the sphere.
 
@@ -83,8 +83,8 @@ class ConvergenceRate(object):
         eq_name = eq.__class__.__name__
         eq_dim=eq.n_input-1
         geom = eq.geometry()
-        _,data_boundary=eq.generate_data(1,20)
-        random_methods = ["Halton", "LHS", "pseudo", "Hammersley"]
+        _,data_boundary=eq.generate_data(1,200)
+        random_methods = ["LHS"]
         for random_method in random_methods:
             evaluation_number_list1, evaluation_number_list2, evaluation_number_list3 = [], [], []  # evaluation_number_list1, evaluation_number_list2, evaluation_number_list3: list, initialized to empty list for timing each solver
             errors1_list, errors2_list, errors3_list = [], [], []  # errors1_list, errors2_list, errors3_list: list, initialized to empty list for storing errors
@@ -103,7 +103,7 @@ class ConvergenceRate(object):
 
                 # Measure the evaluation_number for solver1
                 if rho_==2:
-                    sol1 = self.solver1.GPsolver(xt_values, data_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
+                    sol1 = self.solver1.GPsolver(xt_values, data_boundary)  # sol1: ndarray, shape: (num_domain,), dtype: float
                     evaluation_number1 += xt_values.shape[0]
                     evaluation_number_list1.append(evaluation_number1)
                 else:

@@ -46,15 +46,15 @@ class ScaSML(object):
         self.evaluation_counter+=1
         u_hat = self.GP.predict(x_t)
         grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:,:-1]
-        # compute PDE loss
-        epsilon = self.GP.compute_PDE_loss(x_t)
+        # # compute PDE loss
+        # epsilon = self.GP.compute_PDE_loss(x_t)
         # Calculate the values for the generator function
         '''TO DO: should we multiply z_breve with sigma(x_t) or not?'''
         '''Personally, I think we should, since the W in the algorithm is not multiplied by sigma.'''
         val1 = eq.f(x_t, u_breve + u_hat, eq.sigma(x_t) * (grad_u_hat_x+ z_breve))
         val2 = eq.f(x_t, u_hat, eq.sigma(x_t) * grad_u_hat_x)
-        # return val1 - val2 #light version
-        return val1-val2+epsilon #large version
+        return val1 - val2 #light version
+        # return val1-val2+epsilon #large version
     
     def g(self, x_t):
         '''
@@ -73,10 +73,10 @@ class ScaSML(object):
         u_hat = self.GP.predict(x_t)
         # tensor_x_t[:, -1] = self.T
         # Calculate the result of the terminal constraint function
-        result = eq.g(x_t) - u_hat[:, 0]
+        result = eq.g(x_t) - u_hat
         # if np.abs(result).any() > 0.5:
         #     print(f'g:{result}')
-        return result
+        return result[:,0]
     
     def inverse_gamma(self, gamma_input):
         '''

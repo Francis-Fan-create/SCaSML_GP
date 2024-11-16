@@ -2,6 +2,7 @@ import numpy as np
 import jax.numpy as jnp
 from jax import grad, vmap, hessian, jit, random, lax
 import jax.ops as jop
+import optax
 
     
 class GP(object):
@@ -48,9 +49,15 @@ class GP(object):
         dt_x_t_kappa = dx_t_kappa[-1]
         return dt_x_t_kappa
     
+    def dy_t_kappa(self,x_t,y_t):
+        '''Compute gradient of the kernel matrix K(x_t,y_t) with respect to y_t'''
+        return grad(self.kappa,argnums=1)(x_t,y_t)
+    
     def dt_y_t_kappa(self,x_t,y_t):
         '''Compute time derivative of the kernel matrix K(x_t,y_t) with respect to y_t'''
-        return -self.dt_x_t_kappa(x_t,y_t)
+        dy_t_kappa = self.dy_t_kappa(x_t,y_t)
+        dt_y_t_kappa = dy_t_kappa[-1]
+        return dt_y_t_kappa
     
     def div_x_kappa(self,x_t,y_t):
         '''Compute divergence of the kernel matrix K(x_t,y_t) with respect to x_t'''
@@ -60,7 +67,9 @@ class GP(object):
     
     def div_y_kappa(self,x_t,y_t):
         '''Compute divergence of the kernel matrix K(x_t,y_t) with respect to y_t'''
-        return -self.div_x_kappa(x_t,y_t)
+        dy_t_kappa = self.dy_t_kappa(x_t,y_t)
+        div_y_kappa = jnp.sum(dy_t_kappa[:-1],axis=0)
+        return div_y_kappa
     
     def laplacian_x_t_kappa(self,x_t,y_t):
         '''Compute Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t'''
@@ -70,7 +79,9 @@ class GP(object):
     
     def laplacian_y_t_kappa(self,x_t,y_t):
         '''Compute Laplacian of the kernel matrix K(x_t,y_t) with respect to y_t'''
-        return self.laplacian_x_t_kappa(x_t,y_t)
+        hessian_kappa = hessian(self.kappa,argnums=1)(x_t,y_t)[:-1,:-1]
+        laplacian_y_t_kappa = jnp.trace(hessian_kappa,axis1=0,axis2=1)
+        return laplacian_y_t_kappa
     
     def dt_x_t_dt_y_t_kappa(self,x_t,y_t):
         '''Compute second time derivative of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
@@ -263,11 +274,6 @@ class GP(object):
         n_input = self.n_input
         col_dim = 4 * N_domain + N_boundary  # Total columns
     
-        sigma_squared_inv = -1 / (self.sigma ** 2)
-    
-        # Compute differences between x_t_infer and x_t_domain/boundary
-        delta_x_domain = x_t_infer[:, None, :] - x_t_domain[None, :, :]  # Shape: (N_infer, N_domain, n_input)
-        delta_x_boundary = x_t_infer[:, None, :] - x_t_boundary[None, :, :]  # Shape: (N_infer, N_boundary, n_input)
     
         # Compute blocks of the gradient matrix
         # G1: dx_t_kappa between x_t_infer and x_t_domain
@@ -276,16 +282,13 @@ class GP(object):
         G2 = vmap(lambda x_i: vmap(self.dx_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary))(x_t_infer)  # Shape: (N_infer, N_boundary, n_input)
     
         # G3: Compute gradient for laplacian_y_t_kappa
-        laplacian_y = vmap(lambda x_i: vmap(self.laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain))(x_t_infer)  # Shape: (N_infer, N_domain)
-        G3 = sigma_squared_inv * delta_x_domain * laplacian_y[:, :, None]  # Shape: (N_infer, N_domain, n_input)
+        G3 = vmap(lambda x_i: vmap(grad(self.laplacian_y_t_kappa,argnums=0), in_axes=(None, 0))(x_i, x_t_domain))(x_t_infer)  # Shape: (N_infer, N_domain, n_input)
     
         # G4: Compute gradient for dt_y_t_kappa
-        dt_y = vmap(lambda x_i: vmap(self.dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain))(x_t_infer)  # Shape: (N_infer, N_domain)
-        G4 = sigma_squared_inv * delta_x_domain * dt_y[:, :, None]  # Shape: (N_infer, N_domain, n_input)
+        G4 = vmap(lambda x_i: vmap(grad(self.dt_y_t_kappa,argnums=0), in_axes=(None, 0))(x_i, x_t_domain))(x_t_infer)  # Shape: (N_infer, N_domain, n_input)
     
         # G5: Compute gradient for div_y_kappa
-        div_y = vmap(lambda x_i: vmap(self.div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain))(x_t_infer)  # Shape: (N_infer, N_domain)
-        G5 = sigma_squared_inv * delta_x_domain * div_y[:, :, None]  # Shape: (N_infer, N_domain, n_input)
+        G5 = vmap(lambda x_i: vmap(grad(self.div_y_kappa,argnums=0), in_axes=(None, 0))(x_i, x_t_domain))(x_t_infer)  # Shape: (N_infer, N_domain, n_input)
     
         # Concatenate blocks horizontally
         dx_t_kernel_x_phi = jnp.concatenate([G1, G2, G3, G4, G5], axis=1)  # Shape: (N_infer, col_dim, n_input)
@@ -454,8 +457,15 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=50):
-        '''Solve the Gaussian process using Gauss-Newton method'''
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=8000):
+        '''Solve the Gaussian process using Adam optimizer from Optax with Early Stopping and Exponentially Decaying Learning Rate'''
+        optimizer_steps = GN_steps
+        initial_learning_rate = 1e-2
+        learning_rate_decay_steps = 1000  # Number of steps before each decay
+        learning_rate_decay_rate = 0.96  # Decay rate
+        patience = 900
+        delta = 1e-5
+        
         rhs_f = self.rhs_f(x_t_domain)
         bdy_g = self.bdy_g(x_t_boundary)
     
@@ -471,63 +481,51 @@ class GP(object):
     
         grad_J = grad(self.loss_function)
     
-        for iter_step in range(GN_steps):
+        # Initialize Exponentially Decaying Learning Rate Scheduler
+        scheduler = optax.exponential_decay(
+            init_value=initial_learning_rate,
+            transition_steps=learning_rate_decay_steps,
+            decay_rate=learning_rate_decay_rate,
+            staircase=True
+        )
+    
+        # Initialize Adam optimizer with gradient clipping and learning rate decay
+        optimizer = optax.chain(
+            optax.clip_by_global_norm(1.0),
+            optax.adam(learning_rate=scheduler)
+        )
+        opt_state = optimizer.init(sol)
+    
+        best_loss = J_now
+        epochs_since_improvement = 0
+    
+        for iter_step in range(optimizer_steps):
             gradient = grad_J(sol, rhs_f, bdy_g, L)
             grad_norm = jnp.linalg.norm(gradient)
-            print(f"Iteration {iter_step}: Gradient norm = {grad_norm}")
     
-            # # Validate Hessian
-            # difference = self.compare_hessians(sol, rhs_f, bdy_g, L)
-            # if difference > 1e-3:
-            #     print(f"Significant Hessian discrepancy detected: {difference}")
+            # Update parameters using Adam optimizer
+            updates, opt_state = optimizer.update(gradient, opt_state, sol)
+            sol = optax.apply_updates(sol, updates)
     
-            # Compute Hessian
-            # Hessian = self.Hessian_GN(sol, rhs_f, bdy_g, L)
-            Hessian = hessian(self.loss_function, argnums=0)(sol, rhs_f, bdy_g, L)
-            
-            # Regularize Hessian
-            epsilon = 1e-4  # Increased regularization
-            Hessian += epsilon * jnp.eye(Hessian.shape[0])
+            # Compute current loss
+            J_now = self.loss_function(sol, rhs_f, bdy_g, L)
+            J_hist.append(J_now)
     
-            # Check condition number
-            cond_num = jnp.linalg.cond(Hessian)
-            print(f"Iteration {iter_step}: Hessian condition number = {cond_num}")
-    
-            # Solve for the update step
-            try:
-                temp = jnp.linalg.solve(Hessian, gradient)
-            except jnp.linalg.LinAlgError as e:
-                print(f"LinAlgError during Hessian inversion: {e}")
-                break
-    
-            # Adjust step size if necessary
-            alpha = 0.1  # Start with a smaller step size
-            backtracking_factor = 0.5
-            max_backtracking = 10
-            success = False
-    
-            for bt in range(max_backtracking):
-                sol_candidate = sol - alpha * temp
-                loss_candidate = self.loss_function(sol_candidate, rhs_f, bdy_g, L)
-                if loss_candidate < J_now:
-                    success = True
-                    sol = sol_candidate
-                    J_now = loss_candidate
-                    J_hist.append(J_now)
-                    break
-                else:
-                    alpha *= backtracking_factor
-    
-            if not success:
-                print(f"Backtracking failed at iteration {iter_step}")
-                break
+            # Check for improvement
+            if J_now < best_loss - delta:
+                best_loss = J_now
+                epochs_since_improvement = 0
+            else:
+                epochs_since_improvement += 1
     
             # Log update details
-            print(f"iter = {iter_step}, Gauss-Newton step size = {alpha}, loss = {J_now}")
-            print(f"Iteration {iter_step}: Hessian condition number = {cond_num}")
+            if iter_step % 100 == 0 or iter_step == optimizer_steps - 1:
+                print(f"Iteration {iter_step}: Loss = {J_now}, Gradient norm = {grad_norm}")
     
-            # # Test gradients
-            # self.test_gradients(sol, rhs_f, bdy_g, L)
+            # Early stopping based on patience
+            if epochs_since_improvement >= patience:
+                print(f"Early stopping at iteration {iter_step} due to no improvement in loss for {patience} steps.")
+                break
     
             # Early stopping if gradient norm is small
             if grad_norm < 1e-5:

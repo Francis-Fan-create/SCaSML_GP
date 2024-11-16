@@ -47,7 +47,7 @@ class NormalSphere(object):
         self.T = equation.T  # equation.T: float
         self.radius = np.sqrt(self.dim * (self.T - self.t0) ** 2)  # radius: float, calculated based on dimension and time
 
-    def test(self, save_path, rhomax=2, n_samples=50, x_grid_num=100, t_grid_num=10):
+    def test(self, save_path, rhomax=2, n_samples=500, x_grid_num=100, t_grid_num=10):
         '''
         Compares solvers on different distances on the sphere.
 
@@ -85,7 +85,7 @@ class NormalSphere(object):
         eq = self.equation
         eq_name = eq.__class__.__name__
         n=rhomax
-        _,data_boundary= eq.generate_data(1,20)
+        _,data_boundary= eq.generate_data(1,200)
         x_grid = np.linspace(0, self.radius, x_grid_num)  # x_grid: ndarray, shape: (x_grid_num,), dtype: float
         t_grid = np.linspace(self.t0, self.T, t_grid_num)  # t_grid: ndarray, shape: (t_grid_num,), dtype: float
         x_mesh, t_mesh = np.meshgrid(x_grid, t_grid)  # x_mesh, t_mesh: ndarray, shape: (t_grid_num, x_grid_num), dtype: float
@@ -111,14 +111,9 @@ class NormalSphere(object):
                 exact_sol = eq.exact_solution(xt_values)  # exact_sol: ndarray, shape: (n_samples,), dtype: float
 
                 # Measure the time for solver1
-                if i == 0 and j == 0:
-                    start = time.time()
-                    sol1 = self.solver1.GPsolver(xt_values, data_boundary, GN_step=4)  # sol1: ndarray, shape: (num_domain,), dtype: float
-                    time1 += time.time() - start
-                else:
-                    start = time.time()
-                    sol1 = self.solver1.predict(xt_values)  # sol1: ndarray, shape: (n_samples,), dtype: float
-                    time1 += time.time() - start
+                start = time.time()
+                sol1 = self.solver1.GPsolver(xt_values, data_boundary)  # sol1: ndarray, shape: (num_domain,), dtype: float
+                time1 += time.time() - start
 
                 # Measure the time for solver2
                 start = time.time()

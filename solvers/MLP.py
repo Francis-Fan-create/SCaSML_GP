@@ -56,7 +56,7 @@ class MLP(object):
         batch_size=x_t.shape[0]
         self.evaluation_counter+=batch_size
         eq = self.equation
-        return eq.g(x_t)
+        return eq.g(x_t)[:,0]
     
     def inverse_gamma(self, gamma_input):
         '''
