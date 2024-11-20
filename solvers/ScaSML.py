@@ -68,7 +68,7 @@ class ScaSML(object):
         '''
         eq = self.equation
         batch_size=x_t.shape[0]
-        self.evaluation_counter+=batch_size
+        self.evaluation_counter+=1
         batch_size=x_t.shape[0]
         u_hat = self.GP.predict(x_t)
         # tensor_x_t[:, -1] = self.T
@@ -199,6 +199,7 @@ class ScaSML(object):
         
         # Monte Carlo simulation
         W = np.sqrt(T - t)[:, np.newaxis, np.newaxis] * np.random.normal(size=(batch_size, MC, dim))
+        self.evaluation_counter+=MC
         X = np.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC, axis=1)
         disturbed_X = X + mu*(T-t)[:, np.newaxis, np.newaxis]+ sigma * W  # Disturbed spatial coordinates, shape (batch_size, MC, dim)
         
@@ -242,6 +243,7 @@ class ScaSML(object):
             # Simulate and calculate u, z for each quadrature point
             for k in range(q):
                 dW = np.sqrt(d[:, k])[:, np.newaxis, np.newaxis] * np.random.normal(size=(batch_size, MC, dim))
+                self.evaluation_counter+=MC*dim
                 W += dW
                 X += mu*(d[:, k])[:,np.newaxis,np.newaxis]+sigma * dW
                 co_solver_l = lambda X_t: self.uz_solve(n=l, rho=rho, x_t=X_t)

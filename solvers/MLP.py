@@ -39,7 +39,7 @@ class MLP(object):
             ndarray: The output of the generator function of shape (batch_size,).
         '''
         batch_size=x_t.shape[0]
-        self.evaluation_counter+=batch_size
+        self.evaluation_counter+=1
         eq = self.equation
         return eq.f(x_t, u, z)
     
@@ -54,7 +54,7 @@ class MLP(object):
             ndarray: The output of the terminal constraint function of shape (batch_size,).
         '''
         batch_size=x_t.shape[0]
-        self.evaluation_counter+=batch_size
+        self.evaluation_counter+=1
         eq = self.equation
         return eq.g(x_t)[:,0]
     
@@ -186,6 +186,7 @@ class MLP(object):
         
         # Generate Monte Carlo samples for backward Euler
         W = np.sqrt(T - t)[:, np.newaxis, np.newaxis] * np.random.normal(size=(batch_size, MC, dim))  # Brownian increments, shape (batch_size, MC, dim)
+        self.evaluation_counter+=MC
         X = np.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC, dim)
         disturbed_X = X + mu*(T-t)[:, np.newaxis, np.newaxis]+ sigma * W  # Disturbed spatial coordinates, shape (batch_size, MC, dim)
         
@@ -225,6 +226,7 @@ class MLP(object):
             # Compute simulated values for each quadrature point
             for k in range(q):
                 dW = np.sqrt(d[:, k])[:, np.newaxis, np.newaxis] * np.random.normal(size=(batch_size, MC, dim))  # Brownian increments for current time step, shape (batch_size, MC, dim)
+                self.evaluation_counter+=MC*dim
                 W += dW  # Accumulate Brownian increments
                 X += mu*(d[:, k])[:,np.newaxis,np.newaxis]+sigma * dW  # Update spatial coordinates
                 co_solver_l = lambda X_t: self.uz_solve(n=l, rho=rho, x_t=X_t)  # Co-solver for level l

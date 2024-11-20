@@ -47,10 +47,10 @@ class NormalSphere(object):
         self.T = equation.T  # equation.T: float
         self.radius = np.sqrt(self.dim * (self.T - self.t0) ** 2)  # radius: float, calculated based on dimension and time
 
-    def test(self, save_path, rhomax=2, n_samples=500, x_grid_num=100, t_grid_num=10):
+    def test(self, save_path, rhomax=2, n_samples=200, x_grid_num=100, t_grid_num=10):
         '''
         Compares solvers on different distances on the sphere.
-
+    
         Parameters:
         save_path (str): The path to save the results.
         rhomax (int): The maximum value of rho for approximation parameters.
@@ -58,91 +58,83 @@ class NormalSphere(object):
         x_grid_num (int): The number of grid points in the x dimension.
         t_grid_num (int): The number of grid points in the time dimension.
         '''
-        #initialize the profiler
+        # Initialize the profiler
         profiler = cProfile.Profile()
         profiler.enable()
-        # create the save path if it does not exist
+        # Create the save path if it does not exist
         class_name = self.__class__.__name__
         new_path = f"{save_path}/{class_name}"
         if not os.path.exists(new_path):
             os.makedirs(new_path)
         save_path = new_path
-        directory=f'{save_path}/callbacks'
+        directory = f'{save_path}/callbacks'
         # Delete former callbacks
         if os.path.exists(directory):
-            # iterate over the files in the directory
             for filename in os.listdir(directory):
                 file_path = os.path.join(directory, filename)
                 try:
-                    # if it is a file or a link, delete it
                     if os.path.isfile(file_path) or os.path.islink(file_path):
                         os.unlink(file_path)
-                    # if it is a directory, delete it
                     elif os.path.isdir(file_path):
                         shutil.rmtree(file_path)
                 except Exception as e:
-                    print(f'Failed to delete {file_path}. Reason: {e}')        
+                    print(f'Failed to delete {file_path}. Reason: {e}')
         eq = self.equation
         eq_name = eq.__class__.__name__
-        n=rhomax
-        _,data_boundary= eq.generate_data(1,200)
-        x_grid = np.linspace(0, self.radius, x_grid_num)  # x_grid: ndarray, shape: (x_grid_num,), dtype: float
-        t_grid = np.linspace(self.t0, self.T, t_grid_num)  # t_grid: ndarray, shape: (t_grid_num,), dtype: float
-        x_mesh, t_mesh = np.meshgrid(x_grid, t_grid)  # x_mesh, t_mesh: ndarray, shape: (t_grid_num, x_grid_num), dtype: float
+        n = rhomax
+        # Generate training data
+        data_domain, data_boundary = eq.generate_data(1000, 200)  # Adjust the number of samples as needed
+        x_grid = np.linspace(0, self.radius, x_grid_num)
+        t_grid = np.linspace(self.t0, self.T, t_grid_num)
+        x_mesh, t_mesh = np.meshgrid(x_grid, t_grid)
         self.solver2.set_approx_parameters(rhomax)
         self.solver3.set_approx_parameters(rhomax)
-        errors1 = np.zeros_like(x_mesh)  # errors1: ndarray, shape: (t_grid_num, x_grid_num), dtype: float
-        errors2 = np.zeros_like(x_mesh)  # errors2: ndarray, shape: (t_grid_num, x_grid_num), dtype: float
-        errors3 = np.zeros_like(x_mesh)  # errors3: ndarray, shape: (t_grid_num, x_grid_num), dtype: float
-        rel_error1 = np.zeros_like(x_mesh)  # rel_error1: ndarray, shape: (t_grid_num, x_grid_num), dtype: float
-        rel_error2 = np.zeros_like(x_mesh)  # rel_error2: ndarray, shape: (t_grid_num, x_grid_num), dtype: float
-        rel_error3 = np.zeros_like(x_mesh)  # rel_error3: ndarray, shape: (t_grid_num, x_grid_num), dtype: float
-        real_sol_abs = np.zeros_like(x_mesh)  # real_sol_abs: ndarray, shape: (t_grid_num, x_grid_num), dtype: float
-        time1, time2, time3 = 0, 0, 0  # time1, time2, time3: float, initialized to 0 for timing each solver
-
+        errors1 = np.zeros_like(x_mesh)
+        errors2 = np.zeros_like(x_mesh)
+        errors3 = np.zeros_like(x_mesh)
+        rel_error1 = np.zeros_like(x_mesh)
+        rel_error2 = np.zeros_like(x_mesh)
+        rel_error3 = np.zeros_like(x_mesh)
+        real_sol_abs = np.zeros_like(x_mesh)
+        time1, time2, time3 = 0, 0, 0
+    
+        # Train solver1
+        print("Training solver1...")
+        self.solver1.GPsolver(data_domain, data_boundary)
+    
         # Compute the errors
-        for i in tqdm(range(x_mesh.shape[0]), desc=f"Computing errors"):
+        for i in tqdm(range(x_mesh.shape[0]), desc="Computing errors"):
             for j in tqdm(range(x_mesh.shape[1]), desc=f"Computing errors at time {t_grid[i]}"):
-                x_values = np.random.normal(0, 1, (n_samples, self.dim))  # x_values: ndarray, shape: (n_samples, self.dim), dtype: float
-                x_values /= np.linalg.norm(x_values, axis=1)[:, np.newaxis]  # Normalize x_values
-                x_values *= x_mesh[i, j]  # Scale x_values by x_mesh[i, j]
-                t_values = np.full((n_samples, 1), t_mesh[i, j])  # t_values: ndarray, shape: (n_samples, 1), dtype: float
-                xt_values = np.concatenate((x_values, t_values), axis=1)  # xt_values: ndarray, shape: (n_samples, self.dim + 1), dtype: float
-                exact_sol = eq.exact_solution(xt_values)  # exact_sol: ndarray, shape: (n_samples,), dtype: float
-
-                # Measure the time for solver1
+                x_values = np.random.normal(0, 1, (n_samples, self.dim))
+                x_values /= np.linalg.norm(x_values, axis=1)[:, np.newaxis]
+                x_values *= x_mesh[i, j]
+                t_values = np.full((n_samples, 1), t_mesh[i, j])
+                xt_values = np.concatenate((x_values, t_values), axis=1)
+                exact_sol = eq.exact_solution(xt_values)
+    
+                # Predict with solver1
                 start = time.time()
-                sol1 = self.solver1.GPsolver(xt_values, data_boundary)  # sol1: ndarray, shape: (num_domain,), dtype: float
+                sol1 = self.solver1.predict(xt_values)
                 time1 += time.time() - start
-
+    
                 # Measure the time for solver2
                 start = time.time()
-                sol2 = self.solver2.u_solve(n, rhomax, xt_values)  # sol2: ndarray, shape: (n_samples,), dtype: float
+                sol2 = self.solver2.u_solve(n, rhomax, xt_values)
                 time2 += time.time() - start
-
-                # Measure the time for solver3
+    
+                # Predict with solver3
                 start = time.time()
-                sol3 = self.solver3.u_solve(n, rhomax, xt_values)  # sol3: ndarray, shape: (n_samples,), dtype: float
+                sol3 = self.solver3.u_solve(n, rhomax, xt_values)
                 time3 += time.time() - start
 
                 # Compute the average error and relative error
                 errors1[i, j] += np.mean(np.abs(sol1 - exact_sol))
                 errors2[i, j] += np.mean(np.abs(sol2 - exact_sol))
                 errors3[i, j] += np.mean(np.abs(sol3 - exact_sol))
-                rel_error1[i, j] += np.mean(np.abs(sol1 - exact_sol) / (np.abs(exact_sol)+1e-6))
-                rel_error2[i, j] += np.mean(np.abs(sol2 - exact_sol) / (np.abs(exact_sol)+1e-6))
-                rel_error3[i, j] += np.mean(np.abs(sol3 - exact_sol) / (np.abs(exact_sol)+1e-6))
-                # Compute the average absolute value of the real solution
-                real_sol_abs[i, j] = np.mean(np.abs(exact_sol))  
-                # # Compute the maximum error and relative error
-                # errors1[i, j] = np.max(np.abs(sol1 - exact_sol))
-                # errors2[i, j] = np.max(np.abs(sol2 - exact_sol))
-                # errors3[i, j] = np.max(np.abs(sol3 - exact_sol))
-                # rel_error1[i, j] = np.max(np.abs(sol1 - exact_sol) / (np.abs(exact_sol)+1e-6))
-                # rel_error2[i, j] = np.max(np.abs(sol2 - exact_sol) / (np.abs(exact_sol)+1e-6))
-                # rel_error3[i, j] = np.max(np.abs(sol3 - exact_sol) / (np.abs(exact_sol)+1e-6))
-                # # Compute the maximum absolute value of the real solution
-                # real_sol_abs[i, j] = np.max(np.abs(exact_sol))
+                rel_error1[i, j] += np.mean(np.abs(sol1 - exact_sol)) / np.mean(np.abs(exact_sol) + 1e-6)
+                rel_error2[i, j] += np.mean(np.abs(sol2 - exact_sol)) / np.mean(np.abs(exact_sol) + 1e-6)
+                rel_error3[i, j] += np.mean(np.abs(sol3 - exact_sol)) / np.mean(np.abs(exact_sol) + 1e-6)
+                real_sol_abs[i, j] = np.mean(np.abs(exact_sol)+1e-6)
 
         #stop the profiler
         profiler.disable()

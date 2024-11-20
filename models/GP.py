@@ -457,13 +457,16 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=8000):
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=6000):
         '''Solve the Gaussian process using Adam optimizer from Optax with Early Stopping and Exponentially Decaying Learning Rate'''
-        optimizer_steps = GN_steps
+        adam_every = 500
+        lbfgs_every = 100
+        cycle_len = adam_every + lbfgs_every
+        cycle_num = GN_steps // cycle_len
         initial_learning_rate = 1e-2
         learning_rate_decay_steps = 1000  # Number of steps before each decay
         learning_rate_decay_rate = 0.96  # Decay rate
-        patience = 900
+        patience = 600
         delta = 1e-5
         
         rhs_f = self.rhs_f(x_t_domain)
@@ -490,48 +493,63 @@ class GP(object):
         )
     
         # Initialize Adam optimizer with gradient clipping and learning rate decay
-        optimizer = optax.chain(
+        adam_optimizer = optax.chain(
             optax.clip_by_global_norm(1.0),
             optax.adam(learning_rate=scheduler)
         )
-        opt_state = optimizer.init(sol)
+        opt_state_adam = adam_optimizer.init(sol)
+
+        # Initialize LBFGS optimizer with gradient clipping and learning rate decay
+        lbfgs_optimizer = optax.chain(
+            optax.clip_by_global_norm(1.0),
+            optax.lbfgs(learning_rate=scheduler)
+        )
+        opt_state_lbfgs = lbfgs_optimizer.init(sol)
     
         best_loss = J_now
         epochs_since_improvement = 0
     
-        for iter_step in range(optimizer_steps):
-            gradient = grad_J(sol, rhs_f, bdy_g, L)
-            grad_norm = jnp.linalg.norm(gradient)
+        for cycle in range(cycle_num):
+            for iter_step in range(cycle_len):
+                if iter_step < adam_every:
+                    optimizer = adam_optimizer
+                    opt_state = opt_state_adam
+                else:
+                    optimizer = lbfgs_optimizer
+                    opt_state = opt_state_lbfgs
     
-            # Update parameters using Adam optimizer
-            updates, opt_state = optimizer.update(gradient, opt_state, sol)
-            sol = optax.apply_updates(sol, updates)
+                # Compute gradient
+                gradient = grad_J(sol, rhs_f, bdy_g, L)
+                grad_norm = jnp.linalg.norm(gradient)
     
-            # Compute current loss
-            J_now = self.loss_function(sol, rhs_f, bdy_g, L)
-            J_hist.append(J_now)
+                # Update parameters using optimizer
+                updates, opt_state = optimizer.update(gradient, opt_state, sol)
+                sol = optax.apply_updates(sol, updates)
     
-            # Check for improvement
-            if J_now < best_loss - delta:
-                best_loss = J_now
-                epochs_since_improvement = 0
-            else:
-                epochs_since_improvement += 1
+                # Compute current loss
+                J_now = self.loss_function(sol, rhs_f, bdy_g, L)
+                J_hist.append(J_now)
     
-            # Log update details
-            if iter_step % 100 == 0 or iter_step == optimizer_steps - 1:
-                print(f"Iteration {iter_step}: Loss = {J_now}, Gradient norm = {grad_norm}")
+                # Check for improvement
+                if J_now < best_loss - delta:
+                    best_loss = J_now
+                    epochs_since_improvement = 0
+                else:
+                    epochs_since_improvement += 1
     
-            # Early stopping based on patience
-            if epochs_since_improvement >= patience:
-                print(f"Early stopping at iteration {iter_step} due to no improvement in loss for {patience} steps.")
-                break
+                # Log update details
+                if iter_step % 100 == 0 or iter_step == cycle_len - 1:
+                    print(f"Cycle {cycle}, Iteration {iter_step}: Loss = {J_now}, Gradient norm = {grad_norm}")
     
-            # Early stopping if gradient norm is small
-            if grad_norm < 1e-5:
-                print(f"Early stopping at iteration {iter_step} due to small gradient norm.")
-                break
+                # Early stopping based on patience
+                if epochs_since_improvement >= patience:
+                    print(f"Early stopping at iteration {iter_step} due to no improvement in loss for {patience} steps.")
+                    break
     
+                # Early stopping if gradient norm is small
+                if grad_norm < 1e-5:
+                    print(f"Early stopping at iteration {iter_step} due to small gradient norm.")
+                    break
         self.loss_history = J_hist
     
         # Compute the final feature vector z
