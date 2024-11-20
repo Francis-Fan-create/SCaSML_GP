@@ -3,6 +3,8 @@ import deepxde as dde
 import torch
 import numpy as np
 import jax.numpy as jnp
+from jax import jit
+from functools import partial
 
 import sys
 import os
@@ -219,6 +221,7 @@ class Explicit_Solution_Example(Equation):
         '''
         super().__init__(n_input, n_output)
     
+    @partial(jit,static_argnames=["self"])
     def terminal_constraint(self, x_t):
         '''
         Defines the terminal constraint for the PDE.
@@ -257,6 +260,7 @@ class Explicit_Solution_Example(Equation):
         '''
         return 0.25
     
+    @partial(jit,static_argnames=["self"])
     def f(self, x_t, u, z):
         '''
         Defines the generator term for the PDE.
@@ -273,6 +277,7 @@ class Explicit_Solution_Example(Equation):
         result = self.sigma() * (u - (2 + self.sigma() ** 2 * dim) / (2 * self.sigma() ** 2 * dim)) * jnp.sum(z, axis=1, keepdims=True)
         return result
     
+    @partial(jit,static_argnames=["self"])
     def exact_solution(self, x_t):
         '''
         Computes the exact solution of the PDE for given inputs.
@@ -342,6 +347,7 @@ class Complicated_HJB(Equation):
         '''
         super().__init__(n_input, n_output)
     
+    @partial(jit,static_argnames=["self"])
     def terminal_constraint(self, x_t):
         '''
         Defines the terminal constraint for the PDE.
@@ -383,6 +389,7 @@ class Complicated_HJB(Equation):
         '''
         return jnp.sqrt(2)
     
+    @partial(jit,static_argnames=["self"])
     def f(self, x_t, u, z):
         '''
         Defines the generator term for the PDE.
@@ -397,6 +404,7 @@ class Complicated_HJB(Equation):
         '''
         return jnp.sqrt(2) * jnp.ones_like(u)  # Shape: (batch_size, n_output)
     
+    @partial(jit,static_argnames=["self"])
     def exact_solution(self, x_t):
         '''
         Computes the exact solution of the PDE for given inputs.

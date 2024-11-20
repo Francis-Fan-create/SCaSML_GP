@@ -44,7 +44,7 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=4, n_samples=500):
+    def test(self, save_path, rhomax=3, n_samples=500):
         '''
         Compares solvers on different training sample sizes.
     
@@ -122,8 +122,8 @@ class ConvergenceRate(object):
             errors3 = np.abs(sol3 - exact_sol)
     
             # Compute error ratios (compute ratio first, then take mean)
-            error_ratio1 = np.mean(errors1 / (errors2 + 1e-6))
-            error_ratio3 = np.mean(errors3 / (errors2 + 1e-6))
+            error_ratio1 = np.mean(errors1) / np.mean(errors2 + 1e-6)
+            error_ratio3 = np.mean(errors3) / np.mean(errors2 + 1e-6)
     
             error_ratio1_list.append(error_ratio1)
             error_ratio3_list.append(error_ratio3)

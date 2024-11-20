@@ -24,8 +24,8 @@ from jax import config
 
 #fix random seed for dde
 dde.config.set_random_seed(1234)
-#use pytorch backend
-dde.backend.set_default_backend('pytorch')
+#use jax backend
+dde.backend.set_default_backend('jax')
 # fix random seed for numpy
 np.random.seed(1234)
 # fix random seed for jax

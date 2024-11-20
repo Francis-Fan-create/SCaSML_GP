@@ -18,24 +18,30 @@ import numpy as np
 import torch
 import wandb
 import deepxde as dde
+import jax
+from jax import config
 
 
 #fix random seed for dde
 dde.config.set_random_seed(1234)
-#use pytorch backend
-dde.backend.set_default_backend('pytorch')
+#use jax backend
+dde.backend.set_default_backend('jax')
 # fix random seed for numpy
 np.random.seed(1234)
+# fix random seed for jax
+jax.random.key = jax.random.PRNGKey(1234)
 # fix random seed for torch
 torch.manual_seed(1234)
 #set default data type
 torch.set_default_dtype(torch.float64)
-# device configuration
+# device configuration for torch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 if device.type == 'cuda':
     # get GPU name
     gpu_name = torch.cuda.get_device_name()
+# device configuration for jax
+config.update("jax_enable_x64", True)
 
 #initialize wandb
 wandb.init(project="Explicit_Solution_Example", notes="250 d", tags=["Gaussian Process"],mode="disabled") #debug mode

@@ -496,12 +496,6 @@ class GP(object):
         )
         opt_state = optimizer.init(sol)
 
-        # Initialize LBFGS optimizer with gradient clipping and learning rate decay
-        temp_optimizer = optax.chain(
-            optax.clip_by_global_norm(1.0),
-            optax.scale_by_lbfgs()
-        )
-
         best_loss = J_now
         epochs_since_improvement = 0
 
@@ -531,21 +525,7 @@ class GP(object):
             # Early stopping based on patience
             if epochs_since_improvement >= patience:
                 print(f"Early stopping at iteration {iter_step} due to no improvement in loss for {patience} steps.")
-                # Try using LBFGS to escape local minima
-                temp_opt_state = temp_optimizer.init(sol)
-                gradient = grad_J(sol, rhs_f, bdy_g, L)
-                temp_updates, temp_opt_state = temp_optimizer.update(gradient, temp_opt_state, sol)
-                sol -= scheduler(iter_step) * temp_updates
-                # Check if solution is still a real and is decreasing
-                if jnp.any(jnp.isnan(sol)):
-                    print("LBFGS failed. Exiting.")
-                    break
-                elif self.loss_function(sol, rhs_f, bdy_g, L) > J_now:
-                    print("LBFGS failed to improve the solution. Exiting.")
-                    break
-                else:
-                    print("LBFGS succeeded. Continuing.")
-                    continue
+                break
     
             # Early stopping if gradient norm is small
             if grad_norm < 1e-5:
