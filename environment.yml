@@ -12,6 +12,9 @@ dependencies:
   - pip:
     - wandb==0.16.5
     - deepxde==1.11.1
+    - jax==0.2.21
+    - jaxlib==0.1.75
+    - optax==0.0.9
 
 # activate the environment:
 

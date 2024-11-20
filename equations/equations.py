@@ -229,8 +229,8 @@ class Explicit_Solution_Example(Equation):
         Returns:
         - result (ndarray): A 2D tensor of shape (batch_size, 1), representing the terminal constraint.
         '''
-        result = 1 - 1 / (1 + np.exp(x_t[:, -1] + np.sum(x_t[:, :self.n_input-1], axis=1)))
-        result = result[:, np.newaxis]  # Convert to 2D
+        result = 1 - 1 / (1 + jnp.exp(x_t[:, -1] + jnp.sum(x_t[:, :self.n_input-1], axis=1)))
+        result = result[:, jnp.newaxis]  # Convert to 2D
         return result 
     
     def mu(self, x_t=0):
@@ -270,7 +270,7 @@ class Explicit_Solution_Example(Equation):
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
         dim = self.n_input - 1
-        result = self.sigma() * (u - (2 + self.sigma() ** 2 * dim) / (2 * self.sigma() ** 2 * dim)) * np.sum(z, axis=1, keepdims=True)
+        result = self.sigma() * (u - (2 + self.sigma() ** 2 * dim) / (2 * self.sigma() ** 2 * dim)) * jnp.sum(z, axis=1, keepdims=True)
         return result
     
     def exact_solution(self, x_t):
@@ -285,10 +285,10 @@ class Explicit_Solution_Example(Equation):
         '''
         t = x_t[:, -1]
         x = x_t[:, :-1]
-        sum_x = np.sum(x, axis=1)
-        exp_term = np.exp(t + sum_x)  # Computes the exponential term of the solution.
+        sum_x = jnp.sum(x, axis=1)
+        exp_term = jnp.exp(t + sum_x)  # Computes the exponential term of the solution.
         result = 1 - 1 / (1 + exp_term)  # Computes the exact solution.
-        result = result[:, np.newaxis]  # Convert to 2D
+        result = result[:, jnp.newaxis]  # Convert to 2D
         return result
     
     def geometry(self, t0=0, T=0.5):
@@ -353,9 +353,9 @@ class Complicated_HJB(Equation):
         - result (ndarray): A 2D tensor of shape (batch_size, 1), representing the terminal constraint.
         '''
         x = x_t[:, :self.n_input - 1]  # Extracts the spatial coordinates.
-        sum_x = np.sum(x, axis=1)  # Computes the sum of spatial coordinates.
+        sum_x = jnp.sum(x, axis=1)  # Computes the sum of spatial coordinates.
         result = sum_x  # Computes the terminal constraint.
-        result = result[:, np.newaxis]  # Convert to 2D
+        result = result[:, jnp.newaxis]  # Convert to 2D
         return result 
     
     def mu(self, x_t=0):
@@ -381,7 +381,7 @@ class Complicated_HJB(Equation):
         Returns:
         - (float): The diffusion coefficient.
         '''
-        return np.sqrt(2)
+        return jnp.sqrt(2)
     
     def f(self, x_t, u, z):
         '''
@@ -395,7 +395,7 @@ class Complicated_HJB(Equation):
         Returns:
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
-        return np.sqrt(2) * np.ones_like(u)  # Shape: (batch_size, n_output)
+        return jnp.sqrt(2) * jnp.ones_like(u)  # Shape: (batch_size, n_output)
     
     def exact_solution(self, x_t):
         '''
@@ -409,9 +409,9 @@ class Complicated_HJB(Equation):
         '''
         t = x_t[:, -1]
         x = x_t[:, :-1]
-        sum_x = np.sum(x, axis=1)
+        sum_x = jnp.sum(x, axis=1)
         result = sum_x + (self.T - t)
-        result = result[:, np.newaxis]  # Convert to 2D
+        result = result[:, jnp.newaxis]  # Convert to 2D
         return result
     
     def geometry(self, t0=0, T=0.5):
