@@ -457,7 +457,7 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=6000):
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=5000):
         '''Solve the Gaussian process using Adam optimizer from Optax with Early Stopping and Exponentially Decaying Learning Rate'''
         optimizer_steps = GN_steps
         initial_learning_rate = 1e-2
@@ -549,26 +549,87 @@ class GP(object):
     
         return sol_on_domain
     
-    def predict(self, x_t_infer):
-        '''Predict the solution at x_t_infer'''
-        # Compute the kernel matrix between x_t_infer and phi
-        kernel_x_t_phi = self.kernel_x_t_phi(x_t_infer, self.x_t_domain, self.x_t_boundary)  # Shape: (N_infer, col_dim)
-        right_vector = self.right_vector  # Shape: (col_dim, 1)
-        # Perform matrix multiplication
-        sol_infer = kernel_x_t_phi @ right_vector  # Shape: (N_infer, 1)
-        return sol_infer
+    # def predict(self, x_t_infer):
+    #     '''Predict the solution at x_t_infer'''
+    #     # Compute the kernel matrix between x_t_infer and phi
+    #     kernel_x_t_phi = self.kernel_x_t_phi(x_t_infer, self.x_t_domain, self.x_t_boundary)  # Shape: (N_infer, col_dim)
+    #     right_vector = self.right_vector  # Shape: (col_dim, 1)
+    #     # Perform matrix multiplication
+    #     sol_infer = kernel_x_t_phi @ right_vector  # Shape: (N_infer, 1)
+    #     return sol_infer
 
     
-    def compute_gradient(self, x_t_infer,sol_infer):
-        '''Compute the gradient of the solution at x_t_infer'''
-        # Compute the gradient of the kernel matrix with respect to x_t
-        dx_t_kernel_x_t_phi = self.dx_t_kernel_x_t_phi(x_t_infer, self.x_t_domain, self.x_t_boundary)  # Shape: (N_infer, col_dim, n_input)
-        right_vector = self.right_vector  # Shape: (col_dim, 1)
-        # Compute the gradient without explicit loops
-        # Perform tensor contraction over the col_dim axis
-        gradient = jnp.einsum('ijd,jk->ikd', dx_t_kernel_x_t_phi, right_vector)  # Shape: (N_infer, 1, n_input)
-        # Remove the singleton dimension
-        gradient = gradient.squeeze(axis=1)  # Shape: (N_infer, n_input)
+    # def compute_gradient(self, x_t_infer,sol_infer):
+    #     '''Compute the gradient of the solution at x_t_infer'''
+    #     # Compute the gradient of the kernel matrix with respect to x_t
+    #     dx_t_kernel_x_t_phi = self.dx_t_kernel_x_t_phi(x_t_infer, self.x_t_domain, self.x_t_boundary)  # Shape: (N_infer, col_dim, n_input)
+    #     right_vector = self.right_vector  # Shape: (col_dim, 1)
+    #     # Compute the gradient without explicit loops
+    #     # Perform tensor contraction over the col_dim axis
+    #     gradient = jnp.einsum('ijd,jk->ikd', dx_t_kernel_x_t_phi, right_vector)  # Shape: (N_infer, 1, n_input)
+    #     # Remove the singleton dimension
+    #     gradient = gradient.squeeze(axis=1)  # Shape: (N_infer, n_input)
+    #     return gradient
+
+    '''Acclerated version to compute solution and its gradient'''
+
+    def kernel_x_t_phi_single(self, x_t):
+        '''Compute the kernel vector between a single x_t and phi'''
+        # Compute kernel values between x_t and x_t_domain
+        kappa_values = vmap(lambda x: self.kappa(x_t, x))(self.x_t_domain)  # Shape: (N_domain,)
+        # Compute kernel values between x_t and x_t_boundary
+        kappa_boundary = vmap(lambda x: self.kappa(x_t, x))(self.x_t_boundary)  # Shape: (N_boundary,)
+    
+        # Compute other kernel terms as needed
+        laplacian_kappa = vmap(lambda x: self.laplacian_y_t_kappa(x_t, x))(self.x_t_domain)  # Shape: (N_domain,)
+        dt_kappa = vmap(lambda x: self.dt_y_t_kappa(x_t, x))(self.x_t_domain)  # Shape: (N_domain,)
+        div_kappa = vmap(lambda x: self.div_y_kappa(x_t, x))(self.x_t_domain)  # Shape: (N_domain,)
+    
+        # Concatenate all kernel values to form the phi vector
+        phi_x = jnp.concatenate([
+            kappa_values,
+            kappa_boundary,
+            laplacian_kappa,
+            dt_kappa,
+            div_kappa
+        ])  # Shape: (col_dim,)
+    
+        return phi_x
+    
+    def predict(self, x_t_infer):
+        '''Predict the solution at x_t_infer using a scalar function'''
+        right_vector = self.right_vector.squeeze()  # Shape: (col_dim,)
+    
+        # Define a function representing the solution at a single x_t point
+        def solution_function(x_t):
+            # Compute kernel vector between x_t and phi (training data)
+            kernel_values = self.kernel_x_t_phi_single(x_t)  # Shape: (col_dim,)
+            # Compute the scalar prediction
+            sol = jnp.dot(kernel_values, right_vector)
+            return sol
+    
+        # Vectorize the solution function over x_t_infer
+        solution_function_vectorized = vmap(solution_function)
+    
+        # Compute the predictions
+        sol_infer = solution_function_vectorized(x_t_infer)  # Shape: (N_infer,)
+    
+        return sol_infer
+    
+    def compute_gradient(self, x_t_infer):
+        '''Compute the gradient of the solution at x_t_infer without large intermediate arrays'''
+        right_vector = self.right_vector.squeeze()  # Shape: (col_dim,)
+    
+        # Define the scalar solution function as before
+        def solution_function(x_t):
+            kernel_values = self.kernel_x_t_phi_single(x_t)  # Shape: (col_dim,)
+            sol = jnp.dot(kernel_values, right_vector)
+            return sol
+    
+        # Compute the gradient using automatic differentiation
+        gradient_function = jit(vmap(grad(solution_function)))
+        gradient = gradient_function(x_t_infer)  # Shape: (N_infer, n_input)
+    
         return gradient
     
     def compute_PDE_loss(self,x_t_infer):

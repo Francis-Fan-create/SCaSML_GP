@@ -104,45 +104,48 @@ class ConvergenceRate(object):
             print(f"Training solver1 with {training_size} samples...")
             # Train solver1
             self.solver1.GPsolver(data_domain_train, data_boundary)
-    
+        
             # Since solver3 uses the trained solver1, we can proceed to use solver3 directly
-    
+        
             # Predict with solver1
             sol1 = self.solver1.predict(xt_values)
-    
+        
             # Solve with solver2 (baseline solver)
             sol2 = self.solver2.u_solve(rho_, rho_, xt_values)
-    
+        
             # Solve with solver3 using the trained solver1
             sol3 = self.solver3.u_solve(rho_, rho_, xt_values)
-    
+        
             # Compute errors
-            errors1 = np.abs(sol1 - exact_sol)
-            errors2 = np.abs(sol2 - exact_sol)
-            errors3 = np.abs(sol3 - exact_sol)
-    
+            errors1 = (sol1 - exact_sol) ** 2
+            errors2 = (sol2 - exact_sol) ** 2
+            errors3 = (sol3 - exact_sol) ** 2
+        
             # Compute error ratios (compute ratio first, then take mean)
-            error_ratio1 = np.mean(errors1) / np.mean(errors2 + 1e-6)
-            error_ratio3 = np.mean(errors3) / np.mean(errors2 + 1e-6)
-    
+            error_ratio1 = np.mean(errors1) / (np.mean(errors2) + 1e-6)
+            error_ratio3 = np.mean(errors3) / (np.mean(errors2) + 1e-6)
+        
             error_ratio1_list.append(error_ratio1)
             error_ratio3_list.append(error_ratio3)
             training_sample_size_list.append(training_size)
-    
+        
         # Plot error ratios
         plt.figure()
         plt.plot(training_sample_size_list, np.log10(error_ratio1_list), label='Errors1 / Errors2')
         plt.plot(training_sample_size_list, np.log10(error_ratio3_list), label='Errors3 / Errors2')
-    
+        
         # Fit lines to compute slopes
-        coeffs1 = np.polyfit(np.log10(training_sample_size_list), np.log10(error_ratio1_list), 1)
-        coeffs3 = np.polyfit(np.log10(training_sample_size_list), np.log10(error_ratio3_list), 1)
-        fitted_line1 = np.polyval(coeffs1, np.log10(training_sample_size_list))
-        fitted_line3 = np.polyval(coeffs3, np.log10(training_sample_size_list))
-    
+        log_training_sizes = np.log10(training_sample_size_list + 1e-10)
+        log_error_ratio1 = np.log10(error_ratio1_list + 1e-10)
+        log_error_ratio3 = np.log10(error_ratio3_list + 1e-10)
+        coeffs1 = np.polyfit(log_training_sizes, log_error_ratio1, 1)
+        coeffs3 = np.polyfit(log_training_sizes, log_error_ratio3, 1)
+        fitted_line1 = np.polyval(coeffs1, log_training_sizes)
+        fitted_line3 = np.polyval(coeffs3, log_training_sizes)
+        
         plt.plot(training_sample_size_list, fitted_line1, '--', label=f'Fit Line 1 (Slope: {coeffs1[0]:.2f})')
         plt.plot(training_sample_size_list, fitted_line3, '--', label=f'Fit Line 3 (Slope: {coeffs3[0]:.2f})')
-    
+        
         plt.xlabel('Training Sample Size')
         plt.ylabel('log10(Error Ratio)')
         plt.title('Error Ratios vs Training Sample Size')

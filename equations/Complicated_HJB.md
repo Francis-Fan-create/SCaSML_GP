@@ -77,7 +77,7 @@ $$
 F(\vec{z})=\begin{pmatrix}\vec{z}_4-\frac1d \vec{z}_5+\vec{z}_3\\\vec{z}_2\end{pmatrix}
 \end{align}
 $$
-Feature vector $\phi$ has $M=4M_{\partial \Omega}+ M_{\Omega}$ components, which is also the size of the kernel matrix.
+Feature vector $\phi$ has $M=M_{\partial \Omega}+ 4M_{\Omega}$ components, which is also the size of the kernel matrix.
 
 Taking derivatives
 $$

@@ -73,7 +73,7 @@ F(\vec{z})=\begin{pmatrix}\vec{z}_4+\sigma^2\vec{z}_1\odot\vec{z}_5-(\frac1d +\f
 $$
 Thus $Q_\Omega=4, Q=5$. 
 
-Feature vector $\phi$ have $M=4M_{\partial \Omega}+ M_{\Omega}$ components, which is also the size of the kernel matrix.
+Feature vector $\phi$ have $M=M_{\partial \Omega}+ 4M_{\Omega}$ components, which is also the size of the kernel matrix.
 
 Taking derivatives under linearization condition
 $$

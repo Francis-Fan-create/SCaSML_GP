@@ -115,14 +115,14 @@ class SimpleUniform(object):
         sol3 = self.solver3.u_solve(n, rhomax, data_domain_test)
         time3 += time.time() - start
 
-        # Compute the average error and relative error
-        errors1=np.abs(sol1 - exact_sol)
-        errors2=np.abs(sol2 - exact_sol)
-        errors3=np.abs(sol3 - exact_sol)
-        rel_error1= np.mean(errors1) / (np.mean(np.abs(exact_sol))+1e-6)
-        rel_error2= np.mean(errors2) / (np.mean(np.abs(exact_sol))+1e-6)
-        rel_error3= np.mean(errors3) / (np.mean(np.abs(exact_sol))+1e-6)
-        real_sol_abs= np.mean(exact_sol+1e-6)  # Compute the absolute value of the real solution
+         # Compute the average error and relative error
+        errors1 = (sol1 - exact_sol) ** 2
+        errors2 = (sol2 - exact_sol) ** 2
+        errors3 = (sol3 - exact_sol) ** 2
+        rel_error1 = np.mean(errors1) / (np.mean(exact_sol ** 2) + 1e-6)
+        rel_error2 = np.mean(errors2) / (np.mean(exact_sol ** 2) + 1e-6)
+        rel_error3 = np.mean(errors3) / (np.mean(exact_sol ** 2) + 1e-6)
+        real_sol_abs = np.mean(exact_sol + 1e-6)  # Compute the absolute value of the real solution
         #stop the profiler
         profiler.disable()
         #save the profiler results
@@ -142,8 +142,8 @@ class SimpleUniform(object):
         print(f"Total time for ScaSML: {time3} seconds")
         wandb.log({"Total time for GP": time1, "Total time for MLP": time2, "Total time for ScaSML": time3})
         # compute |errors1|-|errors3|,|errrors2|-|errors3|
-        errors_13=errors1-errors3
-        errors_23=errors2-errors3
+        errors_13 = errors1 - errors3
+        errors_23 = errors2 - errors3
         
         plt.figure()
         # collect all absolute errors
@@ -151,17 +151,17 @@ class SimpleUniform(object):
         errors = [errors1.flatten(), errors2.flatten(), errors3.flatten()]
         # Create a boxplot
         # plt.boxplot(errors, labels=['GP_l1', 'MLP_l1', 'ScaSML_l1', 'GP_l1 - ScaSML_l1', 'MLP_l1 - ScaSML_l1'])
-        plt.boxplot(errors, labels=['GP_l1', 'MLP_l1', 'ScaSML_l1'])
+        plt.boxplot(errors, labels=['GP_L2', 'MLP_L2', 'ScaSML_L2'])
         plt.xticks(rotation=45)
         # Add a title and labels
-        plt.title('Absolute Error Distribution')
-        plt.ylabel('Absolute Error Value')
+        plt.title('L2 Error Distribution')
+        plt.ylabel('L2 Error Value')
         plt.tight_layout()
         # Show the plot
-        plt.savefig(f"{save_path}/Absolute_Error_Distribution.png")
+        plt.savefig(f"{save_path}/L2_Error_Distribution.png")
         # Upload the plot to wandb
-        wandb.log({"Error Distribution": wandb.Image(f"{save_path}/Absolute_Error_Distribution.png")})
-
+        wandb.log({"Error Distribution": wandb.Image(f"{save_path}/L2_Error_Distribution.png")})
+        
         plt.figure()
         # collect all absolute errors
         errors = [errors1.flatten(), errors2.flatten(), errors3.flatten()]
@@ -169,60 +169,59 @@ class SimpleUniform(object):
         means = [np.mean(e) for e in errors]
         stds = [np.std(e) for e in errors]
         # Define labels
-        labels = ['GP_l1', 'MLP_l1', 'ScaSML_l1']
+        labels = ['GP_L2', 'MLP_L2', 'ScaSML_L2']
         x_pos = range(len(labels))
         # Create an error bar plot
         plt.errorbar(x_pos, means, yerr=stds, capsize=5, capthick=2, ecolor='black',  marker='s', markersize=7, mfc='red', mec='black')
         plt.xticks(x_pos, labels, rotation=45)
         # Add a title and labels
-        plt.title('Absolute Error Distribution')
-        plt.ylabel('Absolute Error Value')
+        plt.title('L2 Error Distribution')
+        plt.ylabel('L2 Error Value')
         plt.tight_layout()
         # Show the plot
-        plt.savefig(f"{save_path}/Absolute_Error_Distribution_errorbar.png")
+        plt.savefig(f"{save_path}/L2_Error_Distribution_errorbar.png")
         # Upload the plot to wandb
-        wandb.log({"Error Distribution": wandb.Image(f"{save_path}/Absolute_Error_Distribution_errorbar.png")})
-      
+        wandb.log({"Error Distribution": wandb.Image(f"{save_path}/L2_Error_Distribution_errorbar.png")})
+        
         
         # Print the results
-        print(f"GP rel l1, rho={rhomax}->",rel_error1)
-
+        print(f"GP rel L2, rho={rhomax}->", rel_error1)
         
-        print(f"MLP rel l1, rho={rhomax}->",rel_error2)
-
-       
-        print(f"ScaSML rel l1, rho={rhomax}->",rel_error3)
-         
         
-        print("Real Solution->",real_sol_abs)
+        print(f"MLP rel L2, rho={rhomax}->", rel_error2)
         
-       
-        print(f"GP l1, rho={rhomax}->","min:",np.min(errors1),"max:",np.max(errors1),"mean:",np.mean(errors1))
-
         
-        print(f"MLP l1, rho={rhomax}->","min:",np.min(errors2),"max:",np.max(errors2),"mean:",np.mean(errors2))
-
-       
-        print(f"ScaSML l1, rho={rhomax}->","min:",np.min(errors3),"max:",np.max(errors3),"mean:",np.mean(errors3))
-
-
+        print(f"ScaSML rel L2, rho={rhomax}->", rel_error3)
+        
+        
+        print("Real Solution->", real_sol_abs)
+        
+        print(f"GP L2, rho={rhomax}->","min:", np.min(errors1), "max:", np.max(errors1), "mean:", np.mean(errors1))
+        
+        
+        print(f"MLP L2, rho={rhomax}->","min:", np.min(errors2), "max:", np.max(errors2), "mean:", np.mean(errors2))
+        
+        
+        print(f"ScaSML L2, rho={rhomax}->","min:", np.min(errors3), "max:", np.max(errors3), "mean:", np.mean(errors3))
+        
+        
         # Calculate the sums of positive and negative differences
         positive_sum_13 = np.sum(errors_13[errors_13 > 0])
         negative_sum_13 = np.sum(errors_13[errors_13 < 0])
         positive_sum_23 = np.sum(errors_23[errors_23 > 0])
         negative_sum_23 = np.sum(errors_23[errors_23 < 0])
         # Display the positive count, negative count, positive sum, and negative sum of the difference of the errors
-        print(f'GP l1 - ScaSML l1,rho={rhomax}->','positve count:',np.sum(errors_13>0),'negative count:',np.sum(errors_13<0), 'positive sum:', positive_sum_13, 'negative sum:', negative_sum_13)
-        print(f'MLP l1- ScaSML l1,rho={rhomax}->','positve count:',np.sum(errors_23>0),'negative count:',np.sum(errors_23<0), 'positive sum:', positive_sum_23, 'negative sum:', negative_sum_23)
+        print(f'GP L2 - ScaSML L2, rho={rhomax}->','positive count:', np.sum(errors_13 > 0), 'negative count:', np.sum(errors_13 < 0), 'positive sum:', positive_sum_13, 'negative sum:', negative_sum_13)
+        print(f'MLP L2 - ScaSML L2, rho={rhomax}->','positive count:', np.sum(errors_23 > 0), 'negative count:', np.sum(errors_23 < 0), 'positive sum:', positive_sum_23, 'negative sum:', negative_sum_23)
         # Log the results to wandb
-        wandb.log({f"mean of GP l1,rho={rhomax}": np.mean(errors1), f"mean of MLP l1,rho={rhomax}": np.mean(errors2), f"mean of ScaSML l1,rho={rhomax}": np.mean(errors3)})
-        wandb.log({f"min of GP l1,rho={rhomax}": np.min(errors1), f"min of MLP l1,rho={rhomax}": np.min(errors2), f"min of ScaSML l1,rho={rhomax}": np.min(errors3)})
-        wandb.log({f"max of GP l1,rho={rhomax}": np.max(errors1), f"max of MLP l1,rho={rhomax}": np.max(errors2), f"max of ScaSML l1,rho={rhomax}": np.max(errors3)})
-        wandb.log({f"positive count of GP l1 - ScaSML l1,rho={rhomax}": np.sum(errors_13>0), f"negative count of GP l1 - ScaSML l1,rho={rhomax}": np.sum(errors_13<0), f"positive sum of GP l1 - ScaSML l1,rho={rhomax}": positive_sum_13, f"negative sum of GP l1 - ScaSML l1,rho={rhomax}": negative_sum_13})
-        wandb.log({f"positive count of MLP l1 - ScaSML l1,rho={rhomax}": np.sum(errors_23>0), f"negative count of MLP l1 - ScaSML l1,rho={rhomax}": np.sum(errors_23<0), f"positive sum of MLP l1 - ScaSML l1,rho={rhomax}": positive_sum_23, f"negative sum of MLP l1 - ScaSML l1,rho={rhomax}": negative_sum_23})
+        wandb.log({f"mean of GP L2, rho={rhomax}": np.mean(errors1), f"mean of MLP L2, rho={rhomax}": np.mean(errors2), f"mean of ScaSML L2, rho={rhomax}": np.mean(errors3)})
+        wandb.log({f"min of GP L2, rho={rhomax}": np.min(errors1), f"min of MLP L2, rho={rhomax}": np.min(errors2), f"min of ScaSML L2, rho={rhomax}": np.min(errors3)})
+        wandb.log({f"max of GP L2, rho={rhomax}": np.max(errors1), f"max of MLP L2, rho={rhomax}": np.max(errors2), f"max of ScaSML L2, rho={rhomax}": np.max(errors3)})
+        wandb.log({f"positive count of GP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_13 > 0), f"negative count of GP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_13 < 0), f"positive sum of GP L2 - ScaSML L2, rho={rhomax}": positive_sum_13, f"negative sum of GP L2 - ScaSML L2, rho={rhomax}": negative_sum_13})
+        wandb.log({f"positive count of MLP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_23 > 0), f"negative count of MLP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_23 < 0), f"positive sum of MLP L2 - ScaSML L2, rho={rhomax}": positive_sum_23, f"negative sum of MLP L2 - ScaSML L2, rho={rhomax}": negative_sum_23})
         # reset stdout and stderr
-        sys.stdout=self.stdout
-        sys.stderr=self.stderr
+        sys.stdout = self.stdout
+        sys.stderr = self.stderr
         #close the log file
         log_file.close()
         return rhomax

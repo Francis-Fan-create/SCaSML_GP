@@ -102,7 +102,7 @@ class NormalSphere(object):
         print("Training solver1...")
         self.solver1.GPsolver(data_domain, data_boundary)
     
-        # Compute the errors
+    # Compute the errors
         for i in tqdm(range(x_mesh.shape[0]), desc="Computing errors"):
             for j in tqdm(range(x_mesh.shape[1]), desc=f"Computing errors at time {t_grid[i]}"):
                 x_values = np.random.normal(0, 1, (n_samples, self.dim))
@@ -111,30 +111,30 @@ class NormalSphere(object):
                 t_values = np.full((n_samples, 1), t_mesh[i, j])
                 xt_values = np.concatenate((x_values, t_values), axis=1)
                 exact_sol = eq.exact_solution(xt_values)
-    
+
                 # Predict with solver1
                 start = time.time()
                 sol1 = self.solver1.predict(xt_values)
                 time1 += time.time() - start
-    
+
                 # Measure the time for solver2
                 start = time.time()
                 sol2 = self.solver2.u_solve(n, rhomax, xt_values)
                 time2 += time.time() - start
-    
+
                 # Predict with solver3
                 start = time.time()
                 sol3 = self.solver3.u_solve(n, rhomax, xt_values)
                 time3 += time.time() - start
 
                 # Compute the average error and relative error
-                errors1[i, j] += np.mean(np.abs(sol1 - exact_sol))
-                errors2[i, j] += np.mean(np.abs(sol2 - exact_sol))
-                errors3[i, j] += np.mean(np.abs(sol3 - exact_sol))
-                rel_error1[i, j] += np.mean(np.abs(sol1 - exact_sol)) / np.mean(np.abs(exact_sol) + 1e-6)
-                rel_error2[i, j] += np.mean(np.abs(sol2 - exact_sol)) / np.mean(np.abs(exact_sol) + 1e-6)
-                rel_error3[i, j] += np.mean(np.abs(sol3 - exact_sol)) / np.mean(np.abs(exact_sol) + 1e-6)
-                real_sol_abs[i, j] = np.mean(np.abs(exact_sol)+1e-6)
+                errors1[i, j] += (sol1 - exact_sol) ** 2
+                errors2[i, j] += (sol2 - exact_sol) ** 2
+                errors3[i, j] += (sol3 - exact_sol) ** 2
+                rel_error1[i, j] += (sol1 - exact_sol) ** 2 / (np.mean(exact_sol ** 2) + 1e-6)
+                rel_error2[i, j] += (sol2 - exact_sol) ** 2 / (np.mean(exact_sol ** 2) + 1e-6)
+                rel_error3[i, j] += (sol3 - exact_sol) ** 2 / (np.mean(exact_sol ** 2) + 1e-6)
+                real_sol_abs[i, j] = np.mean(exact_sol ** 2 + 1e-6)
 
         #stop the profiler
         profiler.disable()
@@ -161,21 +161,18 @@ class NormalSphere(object):
         
         plt.figure()
         # collect all absolute errors
-        errors = [errors1.flatten(), errors2.flatten(), errors3.flatten(), errors_13.flatten(), errors_23.flatten()]
-        errors= [errors1.flatten(), errors2.flatten(), errors3.flatten()]
+        errors = [errors1.flatten(), errors2.flatten(), errors3.flatten()]
         # Create a boxplot
-        # plt.boxplot(errors, labels=['GP_l1', 'MLP_l1', 'ScaSML_l1', 'GP_l1 - ScaSML_l1', 'MLP_l1 - ScaSML_l1'])
-        plt.boxplot(errors, labels=['GP_l1', 'MLP_l1', 'ScaSML_l1'])
+        plt.boxplot(errors, labels=['GP_L2', 'MLP_L2', 'ScaSML_L2'])
         plt.xticks(rotation=45)
-        # plt.yscale('log')
         # Add a title and labels
-        plt.title('Absolute Error Distribution')
-        plt.ylabel('Absolute Error Value')
+        plt.title('L2 Error Distribution')
+        plt.ylabel('L2 Error Value')
         plt.tight_layout()
         # Show the plot
-        plt.savefig(f"{save_path}/Absolute_Error_Distribution.png")
+        plt.savefig(f"{save_path}/L2_Error_Distribution.png")
         # Upload the plot to wandb
-        wandb.log({"Error Distribution": wandb.Image(f"{save_path}/Absolute_Error_Distribution.png")})
+        wandb.log({"Error Distribution": wandb.Image(f"{save_path}/L2_Error_Distribution.png")})
 
         plt.figure()
         # collect all absolute errors
@@ -184,27 +181,26 @@ class NormalSphere(object):
         means = [np.mean(e) for e in errors]
         stds = [np.std(e) for e in errors]
         # Define labels
-        labels = ['GP_l1', 'MLP_l1', 'ScaSML_l1']
+        labels = ['GP_L2', 'MLP_L2', 'ScaSML_L2']
         x_pos = range(len(labels))
         # Create an error bar plot
         plt.errorbar(x_pos, means, yerr=stds, capsize=5, capthick=2, ecolor='black',  marker='s', markersize=7, mfc='red', mec='black')
         plt.xticks(x_pos, labels, rotation=45)
         # Add a title and labels
-        plt.title('Absolute Error Distribution')
-        plt.ylabel('Absolute Error Value')
+        plt.title('L2 Error Distribution')
+        plt.ylabel('L2 Error Value')
         plt.tight_layout()
         # Show the plot
-        plt.savefig(f"{save_path}/Absolute_Error_Distribution_errorbar.png")
+        plt.savefig(f"{save_path}/L2_Error_Distribution_errorbar.png")
         # Upload the plot to wandb
-        wandb.log({"Error Distribution": wandb.Image(f"{save_path}/Absolute_Error_Distribution_errorbar.png")})
+        wandb.log({"Error Distribution": wandb.Image(f"{save_path}/L2_Error_Distribution_errorbar.png")})
 
         plt.figure()
         #collect all relative errors
         rel_errors = [rel_error1.flatten(), rel_error2.flatten(), rel_error3.flatten()]
         # Create a boxplot
-        plt.boxplot(rel_errors, labels=['GP_l1', 'MLP_l1', 'ScaSML_l1'])
+        plt.boxplot(rel_errors, labels=['GP_L2', 'MLP_L2', 'ScaSML_L2'])
         plt.xticks(rotation=45)
-        # plt.yscale('log')
         # Add a title and labels
         plt.title('Relative Error Distribution')
         plt.ylabel('Relative Error Value')
@@ -221,7 +217,7 @@ class NormalSphere(object):
         means = [np.mean(errors) for errors in rel_errors]
         stds = [np.std(errors) for errors in rel_errors]
         # Define labels for each group
-        labels = ['GP_l1', 'MLP_l1', 'ScaSML_l1']
+        labels = ['GP_L2', 'MLP_L2', 'ScaSML_L2']
         x_pos = range(len(labels))
         # Create an error bar plot
         plt.errorbar(x_pos, means, yerr=stds, capsize=5, capthick=2, ecolor='black',  marker='s', markersize=7, mfc='red', mec='black')
@@ -246,36 +242,36 @@ class NormalSphere(object):
         plt.figure()
         plt.imshow(rel_error1, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
-        plt.title("GP rel l1, rho={:d}".format(rhomax))
+        plt.title("GP rel L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
         plt.ylabel("time")
-        plt.savefig(f"{save_path}/GP_rel_l1_rho={rhomax}.png")
+        plt.savefig(f"{save_path}/GP_rel_L2_rho={rhomax}.png")
         # Upload the plot to wandb
-        wandb.log({"GP rel l1": wandb.Image(f"{save_path}/GP_rel_l1_rho={rhomax}.png")} )
-        print(f"GP rel l1, rho={rhomax}->","min:",np.min(rel_error1),"max:",np.max(rel_error1),"mean:",np.mean(rel_error1))
+        wandb.log({"GP rel L2": wandb.Image(f"{save_path}/GP_rel_L2_rho={rhomax}.png")} )
+        print(f"GP rel L2, rho={rhomax}->","min:",np.min(rel_error1),"max:",np.max(rel_error1),"mean:",np.mean(rel_error1))
 
         plt.figure()
         plt.imshow(rel_error2, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
-        plt.title("MLP rel l1, rho={:d}".format(rhomax))
+        plt.title("MLP rel L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
         plt.ylabel("time")
-        plt.savefig(f"{save_path}/MLP_rel_l1_rho={rhomax}.png")
+        plt.savefig(f"{save_path}/MLP_rel_L2_rho={rhomax}.png")
         # Upload the plot to wandb
-        wandb.log({"MLP rel l1": wandb.Image(f"{save_path}/MLP_rel_l1_rho={rhomax}.png")} )
-        print(f"MLP rel l1, rho={rhomax}->","min:",np.min(rel_error2),"max:",np.max(rel_error2),"mean:",np.mean(rel_error2))
+        wandb.log({"MLP rel L2": wandb.Image(f"{save_path}/MLP_rel_L2_rho={rhomax}.png")} )
+        print(f"MLP rel L2, rho={rhomax}->","min:",np.min(rel_error2),"max:",np.max(rel_error2),"mean:",np.mean(rel_error2))
 
         plt.figure()
         plt.imshow(rel_error3, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
-        plt.title("ScaSML rel l1, rho={:d}".format(rhomax))
+        plt.title("ScaSML rel L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
         plt.ylabel("time")
-        plt.savefig(f"{save_path}/ScaSML_rel_l1_rho={rhomax}.png")
+        plt.savefig(f"{save_path}/ScaSML_rel_L2_rho={rhomax}.png")
         # Upload the plot to wandb
-        wandb.log({"ScaSML rel l1": wandb.Image(f"{save_path}/ScaSML_rel_l1_rho={rhomax}.png")} )
-        print(f"ScaSML rel l1, rho={rhomax}->","min:",np.min(rel_error3),"max:",np.max(rel_error3),"mean:",np.mean(rel_error3))
-         
+        wandb.log({"ScaSML rel L2": wandb.Image(f"{save_path}/ScaSML_rel_L2_rho={rhomax}.png")} )
+        print(f"ScaSML rel L2, rho={rhomax}->","min:",np.min(rel_error3),"max:",np.max(rel_error3),"mean:",np.mean(rel_error3))
+            
         # Find the global minimum and maximum error
         vmin = min(np.min(errors1), np.min(errors2), np.min(errors3), np.min(errors_13), np.min(errors_23),np.min(errors_12),np.min(real_sol_abs))
         vmax = max(np.max(errors1), np.max(errors2), np.max(errors3), np.max(errors_13), np.max(errors_23),np.max(errors_12),np.max(real_sol_abs))
@@ -297,65 +293,65 @@ class NormalSphere(object):
         plt.figure()
         plt.imshow(errors1, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
-        plt.title("GP l1, rho={:d}".format(rhomax))
+        plt.title("GP L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
         plt.ylabel("time")
-        plt.savefig(f"{save_path}/GP_l1_rho={rhomax}.png")
+        plt.savefig(f"{save_path}/GP_L2_rho={rhomax}.png")
         # Upload the plot to wandb
-        wandb.log({"GP l1": wandb.Image(f"{save_path}/GP_l1_rho={rhomax}.png")} )
-        print(f"GP l1, rho={rhomax}->","min:",np.min(errors1),"max:",np.max(errors1),"mean:",np.mean(errors1))
+        wandb.log({"GP L2": wandb.Image(f"{save_path}/GP_L2_rho={rhomax}.png")} )
+        print(f"GP L2, rho={rhomax}->","min:",np.min(errors1),"max:",np.max(errors1),"mean:",np.mean(errors1))
 
         plt.figure()
         plt.imshow(errors2, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
-        plt.title("MLP l1, rho={:d}".format(rhomax))
+        plt.title("MLP L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
         plt.ylabel("time")
-        plt.savefig(f"{save_path}/MLP_l1_rho={rhomax}.png")
+        plt.savefig(f"{save_path}/MLP_L2_rho={rhomax}.png")
         # Upload the plot to wandb
-        wandb.log({"MLP l1": wandb.Image(f"{save_path}/MLP_l1_rho={rhomax}.png")} )
-        print(f"MLP l1, rho={rhomax}->","min:",np.min(errors2),"max:",np.max(errors2),"mean:",np.mean(errors2))
+        wandb.log({"MLP L2": wandb.Image(f"{save_path}/MLP_L2_rho={rhomax}.png")} )
+        print(f"MLP L2, rho={rhomax}->","min:",np.min(errors2),"max:",np.max(errors2),"mean:",np.mean(errors2))
 
         plt.figure()
         plt.imshow(errors3, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
-        plt.title("ScaSML l1, rho={:d}".format(rhomax))
+        plt.title("ScaSML L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
         plt.ylabel("time")
-        plt.savefig(f"{save_path}/ScaSML_l1_rho={rhomax}.png")
+        plt.savefig(f"{save_path}/ScaSML_L2_rho={rhomax}.png")
         # Upload the plot to wandb
-        wandb.log({"ScaSML l1": wandb.Image(f"{save_path}/ScaSML_l1_rho={rhomax}.png")} )
-        print(f"ScaSML l1, rho={rhomax}->","min:",np.min(errors3),"max:",np.max(errors3),"mean:",np.mean(errors3))
+        wandb.log({"ScaSML L2": wandb.Image(f"{save_path}/ScaSML_L2_rho={rhomax}.png")} )
+        print(f"ScaSML L2, rho={rhomax}->","min:",np.min(errors3),"max:",np.max(errors3),"mean:",np.mean(errors3))
 
         plt.figure()
         plt.imshow(errors_13, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
-        plt.title("GP l1 - ScaSML l1, rho={:d}".format(rhomax))
+        plt.title("GP L2 - ScaSML L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
         plt.ylabel("time")
-        plt.savefig(f"{save_path}/GP_ScaSML_l1_rho={rhomax}.png")
+        plt.savefig(f"{save_path}/GP_ScaSML_L2_rho={rhomax}.png")
         # Upload the plot to wandb
-        wandb.log({"GP l1 - ScaSML l1": wandb.Image(f"{save_path}/GP_ScaSML_l1_rho={rhomax}.png")} )
+        wandb.log({"GP L2 - ScaSML L2": wandb.Image(f"{save_path}/GP_ScaSML_L2_rho={rhomax}.png")} )
 
         plt.figure()
         plt.imshow(errors_23, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
-        plt.title("MLP l1 - ScaSML l1, rho={:d}".format(rhomax))
+        plt.title("MLP L2 - ScaSML L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
         plt.ylabel("time")
-        plt.savefig(f"{save_path}/MLP_ScaSML_l1_rho={rhomax}.png")
+        plt.savefig(f"{save_path}/MLP_ScaSML_L2_rho={rhomax}.png")
         # Upload the plot to wandb
-        wandb.log({"MLP l1 - ScaSML l1": wandb.Image(f"{save_path}/MLP_ScaSML_l1_rho={rhomax}.png")} )
+        wandb.log({"MLP L2 - ScaSML L2": wandb.Image(f"{save_path}/MLP_ScaSML_L2_rho={rhomax}.png")} )
 
         plt.figure()
         plt.imshow(errors_12, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
-        plt.title("GP l1 - MLP l1, rho={:d}".format(rhomax))
+        plt.title("GP L2 - MLP L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
         plt.ylabel("time")
-        plt.savefig(f"{save_path}/GP_MLP_l1_rho={rhomax}.png")
+        plt.savefig(f"{save_path}/GP_MLP_L2_rho={rhomax}.png")
         # Upload the plot to wandb
-        wandb.log({"GP l1 - MLP l1": wandb.Image(f"{save_path}/GP_MLP_l1_rho={rhomax}.png")} )
+        wandb.log({"GP L2 - MLP L2": wandb.Image(f"{save_path}/GP_MLP_L2_rho={rhomax}.png")} )
 
         # Calculate the sums of positive and negative differences
         positive_sum_13 = np.sum(errors_13[errors_13 > 0])
@@ -365,16 +361,16 @@ class NormalSphere(object):
         postive_sum_12 = np.sum(errors_12[errors_12 > 0])
         negative_sum_12 = np.sum(errors_12[errors_12 < 0])
         # Display the positive count, negative count, positive sum, and negative sum of the difference of the errors
-        print(f'GP l1 - ScaSML l1,rho={rhomax}->','positve count:',np.sum(errors_13>0),'negative count:',np.sum(errors_13<0), 'positive sum:', positive_sum_13, 'negative sum:', negative_sum_13)
-        print(f'MLP l1- ScaSML l1,rho={rhomax}->','positve count:',np.sum(errors_23>0),'negative count:',np.sum(errors_23<0), 'positive sum:', positive_sum_23, 'negative sum:', negative_sum_23)
-        print(f'GP l1 - MLP l1,rho={rhomax}->','positve count:',np.sum(errors_12>0),'negative count:',np.sum(errors_12<0), 'positive sum:', postive_sum_12, 'negative sum:', negative_sum_12)
+        print(f'GP L2 - ScaSML L2,rho={rhomax}->','positve count:',np.sum(errors_13>0),'negative count:',np.sum(errors_13<0), 'positive sum:', positive_sum_13, 'negative sum:', negative_sum_13)
+        print(f'MLP L2- ScaSML L2,rho={rhomax}->','positve count:',np.sum(errors_23>0),'negative count:',np.sum(errors_23<0), 'positive sum:', positive_sum_23, 'negative sum:', negative_sum_23)
+        print(f'GP L2 - MLP L2,rho={rhomax}->','positve count:',np.sum(errors_12>0),'negative count:',np.sum(errors_12<0), 'positive sum:', postive_sum_12, 'negative sum:', negative_sum_12)
         # Log the results to wandb
-        wandb.log({f"mean of GP l1,rho={rhomax}": np.mean(errors1), f"mean of MLP l1,rho={rhomax}": np.mean(errors2), f"mean of ScaSML l1,rho={rhomax}": np.mean(errors3)})
-        wandb.log({f"min of GP l1,rho={rhomax}": np.min(errors1), f"min of MLP l1,rho={rhomax}": np.min(errors2), f"min of ScaSML l1,rho={rhomax}": np.min(errors3)})
-        wandb.log({f"max of GP l1,rho={rhomax}": np.max(errors1), f"max of MLP l1,rho={rhomax}": np.max(errors2), f"max of ScaSML l1,rho={rhomax}": np.max(errors3)})
-        wandb.log({f"positive count of GP l1 - ScaSML l1,rho={rhomax}": np.sum(errors_13>0), f"negative count of GP l1 - ScaSML l1,rho={rhomax}": np.sum(errors_13<0), f"positive sum of GP l1 - ScaSML l1,rho={rhomax}": positive_sum_13, f"negative sum of GP l1 - ScaSML l1,rho={rhomax}": negative_sum_13})
-        wandb.log({f"positive count of MLP l1 - ScaSML l1,rho={rhomax}": np.sum(errors_23>0), f"negative count of MLP l1 - ScaSML l1,rho={rhomax}": np.sum(errors_23<0), f"positive sum of MLP l1 - ScaSML l1,rho={rhomax}": positive_sum_23, f"negative sum of MLP l1 - ScaSML l1,rho={rhomax}": negative_sum_23})
-        wandb.log({f"positive count of GP l1 - MLP l1,rho={rhomax}": np.sum(errors_12>0), f"negative count of GP l1 - MLP l1,rho={rhomax}": np.sum(errors_12<0), f"positive sum of GP l1 - MLP l1,rho={rhomax}": postive_sum_12, f"negative sum of GP l1 - MLP l1,rho={rhomax}": negative_sum_12})
+        wandb.log({f"mean of GP L2,rho={rhomax}": np.mean(errors1), f"mean of MLP L2,rho={rhomax}": np.mean(errors2), f"mean of ScaSML L2,rho={rhomax}": np.mean(errors3)})
+        wandb.log({f"min of GP L2,rho={rhomax}": np.min(errors1), f"min of MLP L2,rho={rhomax}": np.min(errors2), f"min of ScaSML L2,rho={rhomax}": np.min(errors3)})
+        wandb.log({f"max of GP L2,rho={rhomax}": np.max(errors1), f"max of MLP L2,rho={rhomax}": np.max(errors2), f"max of ScaSML L2,rho={rhomax}": np.max(errors3)})
+        wandb.log({f"positive count of GP L2 - ScaSML L2,rho={rhomax}": np.sum(errors_13>0), f"negative count of GP L2 - ScaSML L2,rho={rhomax}": np.sum(errors_13<0), f"positive sum of GP L2 - ScaSML L2,rho={rhomax}": positive_sum_13, f"negative sum of GP L2 - ScaSML L2,rho={rhomax}": negative_sum_13})
+        wandb.log({f"positive count of MLP L2 - ScaSML L2,rho={rhomax}": np.sum(errors_23>0), f"negative count of MLP L2 - ScaSML L2,rho={rhomax}": np.sum(errors_23<0), f"positive sum of MLP L2 - ScaSML L2,rho={rhomax}": positive_sum_23, f"negative sum of MLP L2 - ScaSML L2,rho={rhomax}": negative_sum_23})
+        wandb.log({f"positive count of GP L2 - MLP L2,rho={rhomax}": np.sum(errors_12>0), f"negative count of GP L2 - MLP L2,rho={rhomax}": np.sum(errors_12<0), f"positive sum of GP L2 - MLP L2,rho={rhomax}": postive_sum_12, f"negative sum of GP L2 - MLP L2,rho={rhomax}": negative_sum_12})
         # reset stdout and stderr
         sys.stdout=self.stdout
         sys.stderr=self.stderr

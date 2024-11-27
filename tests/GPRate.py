@@ -78,62 +78,62 @@ class GPRate(object):
                 # Step 2: Generate training data of the current sample size
                 training_xt_values = geom.random_points(sample_size, random=random_method)  # Training inputs
                 _, data_boundary = eq.generate_data(1, sample_size // 5)  # Training outputs
-
+            
                 # Step 3: Train the GP model
                 self.solver1.GPsolver(training_xt_values, data_boundary)
-
+            
                 # Step 4: Predict on the fixed test dataset
                 sol1 = self.solver1.predict(test_xt_values)  # Predictions on test data
-
-                # Step 5: Compute the relative absolute error
-                errors = np.abs(sol1 - test_exact_sol)
+            
+                # Step 5: Compute the relative L2 error
+                errors = (sol1 - test_exact_sol) ** 2
                 mean_error = np.mean(errors)
-                mean_exact_sol = np.mean(np.abs(test_exact_sol) + 1e-6)
+                mean_exact_sol = np.mean(test_exact_sol ** 2 + 1e-6)
                 rel_error = mean_error / mean_exact_sol
                 errors_list.append(rel_error)
-
-                print(f"Sample Size: {sample_size}, Mean Relative Absolute Error: {rel_error}")
-
+            
+                print(f"Sample Size: {sample_size}, Mean Relative L2 Error: {rel_error}")
+            
             # Convert lists to numpy arrays for plotting
             sample_sizes_array = np.array(sample_sizes)
             errors_array = np.array(errors_list)
             epsilon = 1e-10  # To avoid log(0)
-
+            
             # Step 7: Plot the convergence rate for GP
             plt.figure(figsize=(8, 6))
-
+            
             # Plot the data on log-log scale
             plt.plot(sample_sizes_array, errors_array, marker='x', linestyle='-', label='GP')
-
+            
             # Fit a line to the log-log data to find the slope
             log_sample_sizes = np.log10(sample_sizes_array + epsilon)
             log_errors = np.log10(errors_array + epsilon)
             slope, intercept = np.polyfit(log_sample_sizes, log_errors, 1)
             fitted_line = 10 ** (intercept + slope * log_sample_sizes)
             plt.plot(sample_sizes_array, fitted_line, linestyle='--', label=f'Fitted Line (Slope: {slope:.2f})')
-
+            
             # Set plot titles and labels
             plt.title(f'GP Convergence Rate - Sampling Method: {random_method}')
             plt.xlabel('Training Sample Size')
-            plt.ylabel('Mean Relative Absolute Error on Test Set')
-
+            plt.ylabel('Mean Relative L2 Error on Test Set')
+            
             # Apply logarithmic scales to both axes
             plt.xscale('log')
             plt.yscale('log')
-
+            
             # Add legend and grid
             plt.legend()
             plt.grid(True, which="both", ls="--", linewidth=0.5)
-
+            
             # Save the plot to the specified path
             plot_filename = f'GP_convergence_rate_{random_method}.png'
             plt.savefig(os.path.join(save_path, plot_filename))
             plt.close()
-
+            
             print(f"Convergence plot saved to {os.path.join(save_path, plot_filename)}")
-
-        # Disable the profiler and print stats
-        profiler.disable()
-        profiler.print_stats(sort='cumtime')
+            
+            # Disable the profiler and print stats
+            profiler.disable()
+            profiler.print_stats(sort='cumtime')
 
         return 0
