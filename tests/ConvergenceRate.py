@@ -44,7 +44,7 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=3, n_samples=500):
+    def test(self, save_path, rhomax=3, n_samples=50):
         '''
         Compares solvers on different training sample sizes.
     
@@ -88,7 +88,7 @@ class ConvergenceRate(object):
         self.solver3.set_approx_parameters(rho_)
     
         # Define a range of training sample sizes
-        training_sample_sizes = range(200, 600, 100)  # Adjust as needed
+        training_sample_sizes = range(20, 80, 10)  # Adjust as needed
         error_ratio1_list = []
         error_ratio3_list = []
         training_sample_size_list = []

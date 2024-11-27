@@ -47,7 +47,7 @@ class NormalSphere(object):
         self.T = equation.T  # equation.T: float
         self.radius = np.sqrt(self.dim * (self.T - self.t0) ** 2)  # radius: float, calculated based on dimension and time
 
-    def test(self, save_path, rhomax=3, n_samples=200, x_grid_num=100, t_grid_num=10):
+    def test(self, save_path, rhomax=3, n_samples=20, x_grid_num=100, t_grid_num=10):
         '''
         Compares solvers on different distances on the sphere.
     
@@ -83,7 +83,7 @@ class NormalSphere(object):
         eq_name = eq.__class__.__name__
         n = rhomax
         # Generate training data
-        data_domain, data_boundary = eq.generate_data(1000, 200)  # Adjust the number of samples as needed
+        data_domain, data_boundary = eq.generate_data(100, 20)  # Adjust the number of samples as needed
         x_grid = np.linspace(0, self.radius, x_grid_num)
         t_grid = np.linspace(self.t0, self.T, t_grid_num)
         x_mesh, t_mesh = np.meshgrid(x_grid, t_grid)
@@ -128,12 +128,12 @@ class NormalSphere(object):
                 time3 += time.time() - start
 
                 # Compute the average error and relative error
-                errors1[i, j] += (sol1 - exact_sol) ** 2
-                errors2[i, j] += (sol2 - exact_sol) ** 2
-                errors3[i, j] += (sol3 - exact_sol) ** 2
-                rel_error1[i, j] += (sol1 - exact_sol) ** 2 / (np.mean(exact_sol ** 2) + 1e-6)
-                rel_error2[i, j] += (sol2 - exact_sol) ** 2 / (np.mean(exact_sol ** 2) + 1e-6)
-                rel_error3[i, j] += (sol3 - exact_sol) ** 2 / (np.mean(exact_sol ** 2) + 1e-6)
+                errors1[i, j] +=np.mean((sol1 - exact_sol) ** 2)
+                errors2[i, j] += np.mean((sol2 - exact_sol) ** 2)
+                errors3[i, j] += np.mean((sol3 - exact_sol) ** 2)
+                rel_error1[i, j] +=np.mean( (sol1 - exact_sol) ** 2) / (np.mean(exact_sol ** 2) + 1e-6)
+                rel_error2[i, j] += np.mean((sol2 - exact_sol) ** 2)/ (np.mean(exact_sol ** 2) + 1e-6)
+                rel_error3[i, j] += np.mean((sol3 - exact_sol) ** 2) / (np.mean(exact_sol ** 2) + 1e-6)
                 real_sol_abs[i, j] = np.mean(exact_sol ** 2 + 1e-6)
 
         #stop the profiler

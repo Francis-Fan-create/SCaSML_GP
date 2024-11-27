@@ -44,12 +44,12 @@ if device.type == 'cuda':
 config.update("jax_enable_x64", True)
 
 #initialize wandb
-wandb.init(project="Complicated_HJB", notes="250 d", tags=["Gaussian Process"],mode="disabled") #debug mode
-# wandb.init(project="Complicated_HJB", notes="250 d", tags=["Gaussian Process"]) #working mode
+wandb.init(project="Complicated_HJB", notes="10 d", tags=["Gaussian Process"],mode="disabled") #debug mode
+# wandb.init(project="Complicated_HJB", notes="10 d", tags=["Gaussian Process"]) #working mode
 wandb.config.update({"device": device.type}) # record device type
 
 #initialize the equation
-equation=Complicated_HJB(n_input=3,n_output=1)
+equation=Complicated_HJB(n_input=11,n_output=1)
 
 #initialize the normal sphere test
 solver1=GP(equation=equation) #GP solver
@@ -59,16 +59,16 @@ solver3=ScaSML(equation=equation,GP=solver1) #ScaSML object
 
 #run the test for NormalSphere
 test1=NormalSphere(equation,solver1,solver2,solver3)
-rhomax=test1.test(r"results/Complicated_HJB/250d")
+rhomax=test1.test(r"results/Complicated_HJB/10d")
 #run the test for SimpleUniform
 test2=SimpleUniform(equation,solver1,solver2,solver3)
-test2.test(r"results/Complicated_HJB/250d")
+test2.test(r"results/Complicated_HJB/10d")
 #run the test for ConvergenceRate
 test3=ConvergenceRate(equation,solver1,solver2,solver3)
-test3.test(r"results/Complicated_HJB/250d")
+test3.test(r"results/Complicated_HJB/10d")
 #run the test for GPRate
 test4=GPRate(equation,solver1)
-test4.test(r"results/Complicated_HJB/250d")
+test4.test(r"results/Complicated_HJB/10d")
 
 
 #finish wandb

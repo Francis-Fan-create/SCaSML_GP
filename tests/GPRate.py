@@ -39,7 +39,7 @@ class GPRate(object):
         self.solver1 = solver1
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
-    def test(self, save_path, sample_sizes=range(200, 600, 100)):
+    def test(self, save_path, sample_sizes=range(20, 80, 10)):
         '''
         Compares solvers on different training sample sizes.
 
@@ -70,7 +70,7 @@ class GPRate(object):
             errors_list = []
 
             # Step 1: Generate a fixed test dataset
-            test_sample_size = 100  # Fixed size for test data
+            test_sample_size = 50  # Fixed size for test data
             test_xt_values = geom.random_points(test_sample_size, random=random_method)  # Fixed test inputs
             test_exact_sol = eq.exact_solution(test_xt_values)  # Fixed test outputs
 
