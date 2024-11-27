@@ -457,13 +457,13 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=1):
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=1000):
         '''Solve the Gaussian process using Adam optimizer from Optax with Early Stopping and Exponentially Decaying Learning Rate'''
         optimizer_steps = GN_steps
         initial_learning_rate = 1e-2
-        learning_rate_decay_steps = 5  # Number of steps before each decay
+        learning_rate_decay_steps = 100  # Number of steps before each decay
         learning_rate_decay_rate = 0.96  # Decay rate
-        patience = 5
+        patience = 100
         delta = 1e-5
 
         rhs_f = self.rhs_f(x_t_domain)
@@ -519,7 +519,8 @@ class GP(object):
                 epochs_since_improvement += 1
     
             # Log update details
-            print(f"Iteration {iter_step}: Loss = {J_now}, Gradient norm = {grad_norm}")
+            if iter_step % 10 == 0 or iter_step == optimizer_steps - 1:
+                print(f"Iteration {iter_step}: Loss = {J_now}, Gradient norm = {grad_norm}")
     
             # Early stopping based on patience
             if epochs_since_improvement >= patience:

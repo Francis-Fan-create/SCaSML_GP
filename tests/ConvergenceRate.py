@@ -44,9 +44,9 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=3, n_samples=50):
+    def test(self, save_path, rhomax=2, n_samples=50):
         '''
-        Compares solvers on different training sample sizes.
+        Compares solvers on different training iterations.
     
         Parameters:
         save_path (str): The path to save the results.
@@ -87,25 +87,27 @@ class ConvergenceRate(object):
         self.solver2.set_approx_parameters(rho_)
         self.solver3.set_approx_parameters(rho_)
     
-        # Define a range of training sample sizes
-        training_sample_sizes = range(20, 80, 10)  # Adjust as needed
-        error_ratio1_list = []
+        # Fix training sample sizes
+        train_domain = 100
+        train_boundary = 20
+        # Define a range of training iterations
+        GN_steps_list = range(200, 1100, 100)
+        error1_list = []
         error_ratio3_list = []
-        training_sample_size_list = []
+        GN_steps_output_list = []
     
         # Generate test data (fixed)
         xt_values = geom.random_points(n_samples, random="LHS")
         exact_sol = eq.exact_solution(xt_values)
     
-        for training_size in training_sample_sizes:
-            # Generate training data
-            data_domain_train, _ = eq.generate_data(training_size, 0)
-            _, data_boundary = eq.generate_data(1, training_size//5)
-            print(f"Training solver1 with {training_size} samples...")
-            # Train solver1
-            self.solver1.GPsolver(data_domain_train, data_boundary)
-        
-            # Since solver3 uses the trained solver1, we can proceed to use solver3 directly
+        # Generate training data once
+        data_domain_train, _ = eq.generate_data(train_domain, 0)
+        _, data_boundary = eq.generate_data(1, train_boundary)
+    
+        for GN_steps in GN_steps_list:
+            print(f"Training solver1 with {GN_steps} iterations...")
+            # Train solver1 with fixed training sample size and varying GN_steps
+            self.solver1.GPsolver(data_domain_train, data_boundary, GN_steps=GN_steps)
         
             # Predict with solver1
             sol1 = self.solver1.predict(xt_values)
@@ -121,37 +123,41 @@ class ConvergenceRate(object):
             errors2 = (sol2 - exact_sol) ** 2
             errors3 = (sol3 - exact_sol) ** 2
         
-            # Compute error ratios (compute ratio first, then take mean)
-            error_ratio1 = np.mean(errors1) / (np.mean(errors2) + 1e-6)
+            # Compute error ratios
+            error_value1 = np.mean(errors1)
             error_ratio3 = np.mean(errors3) / (np.mean(errors2) + 1e-6)
         
-            error_ratio1_list.append(error_ratio1)
+            error1_list.append(error_value1)
             error_ratio3_list.append(error_ratio3)
-            training_sample_size_list.append(training_size)
+            GN_steps_output_list.append(GN_steps)
         
         # Plot error ratios
         plt.figure()
-        plt.plot(training_sample_size_list, np.log10(error_ratio1_list), label='Errors1 / Errors2')
-        plt.plot(training_sample_size_list, np.log10(error_ratio3_list), label='Errors3 / Errors2')
+        plt.plot(GN_steps_output_list, np.log10(error1_list), label='Errors1')
+        plt.plot(GN_steps_output_list, np.log10(error_ratio3_list), label='Errors3 / Errors2')
         
         # Fit lines to compute slopes
-        log_training_sizes = np.log10(training_sample_size_list + 1e-10)
-        log_error_ratio1 = np.log10(error_ratio1_list + 1e-10)
-        log_error_ratio3 = np.log10(error_ratio3_list + 1e-10)
-        coeffs1 = np.polyfit(log_training_sizes, log_error_ratio1, 1)
-        coeffs3 = np.polyfit(log_training_sizes, log_error_ratio3, 1)
-        fitted_line1 = np.polyval(coeffs1, log_training_sizes)
-        fitted_line3 = np.polyval(coeffs3, log_training_sizes)
+        log_GN_steps = np.log10(GN_steps_output_list)
+        log_error1 = np.log10(error1_list)
+        log_error_ratio3 = np.log10(error_ratio3_list)
+        coeffs1 = np.polyfit(log_GN_steps, log_error1, 1)
+        coeffs3 = np.polyfit(log_GN_steps, log_error_ratio3, 1)
+        fitted_line1 = np.polyval(coeffs1, log_GN_steps)
+        fitted_line3 = np.polyval(coeffs3, log_GN_steps)
         
-        plt.plot(training_sample_size_list, fitted_line1, '--', label=f'Fit Line 1 (Slope: {coeffs1[0]:.2f})')
-        plt.plot(training_sample_size_list, fitted_line3, '--', label=f'Fit Line 3 (Slope: {coeffs3[0]:.2f})')
+        plt.plot(GN_steps_output_list, fitted_line1, '--', label=f'Fit Line 1 (Slope: {coeffs1[0]:.2f})')
+        plt.plot(GN_steps_output_list, fitted_line3, '--', label=f'Fit Line 3 (Slope: {coeffs3[0]:.2f})')
         
-        plt.xlabel('Training Sample Size')
-        plt.ylabel('log10(Error Ratio)')
-        plt.title('Error Ratios vs Training Sample Size')
+        plt.xlabel('Training Iterations (GN_steps)')
+        plt.ylabel('log10(Error) or log10(Error Ratio)')
+        plt.title('ConvergenceRate Verification')
         plt.legend()
         plt.xscale('log')
-        plt.savefig(f'{save_path}/Error_Ratios_vs_Training_Size.png')
-        wandb.log({'Error_Ratios_vs_Training_Size': plt})
+        plt.savefig(f'{save_path}/ConvergenceRate_Verification.png')
+        plt.close()
+    
+        # Disable the profiler and print stats
+        profiler.disable()
+        profiler.print_stats(sort='cumtime')
     
         return rhomax
