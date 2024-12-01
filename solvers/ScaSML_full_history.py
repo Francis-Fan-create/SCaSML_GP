@@ -44,15 +44,10 @@ class ScaSML_full_history(object):
         self.evaluation_counter+=1
         u_hat = self.GP.predict(x_t)
         grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:,:-1]
-        # # compute PDE loss
-        # epsilon = self.GP.compute_PDE_loss(x_t)
         # Calculate the values for the generator function
-        '''TO DO: should we multiply z_breve with sigma(x_t) or not?'''
-        '''Personally, I think we should, since the W in the algorithm is not multiplied by sigma.'''
-        val1 = eq.f(x_t, u_breve + u_hat, eq.sigma(x_t) * (grad_u_hat_x+ z_breve))
+        val1 = eq.f(x_t, u_breve + u_hat, eq.sigma(x_t) * (grad_u_hat_x)+ z_breve)
         val2 = eq.f(x_t, u_hat, eq.sigma(x_t) * grad_u_hat_x)
         return val1 - val2 #light version
-        # return val1-val2+epsilon #large version
     
     def g(self, x_t):
         '''
@@ -126,7 +121,6 @@ class ScaSML_full_history(object):
         # Extract model parameters and functions
         Mf, Mg = self.Mf, self.Mg
         T = self.T  # Terminal time
-        eq = self.equation  # Equation object
         dim = self.n_input - 1  # Spatial dimensions
         batch_size = x_t.shape[0]  # Batch size
         sigma = self.sigma(x_t)  # Volatility, scalar
@@ -136,9 +130,7 @@ class ScaSML_full_history(object):
         f = self.f  # Generator term function
         g = self.g  # Terminal constraint function
         
-        
-        
-       # Manage random keys of JAX
+        # Manage random keys of JAX
         key = random.PRNGKey(0)  # Random key for generating Monte Carlo samples
         subkey = random.split(key, 1)[0]  # Subkey for generating Brownian increments
         
@@ -182,8 +174,8 @@ class ScaSML_full_history(object):
             batch_size=x_t.shape[0]
             u_hat = self.GP.predict(x_t)
             grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:, :-1]   
-            initial_value= jnp.concatenate((u_hat, grad_u_hat_x), axis=-1)        
-            return jnp.concatenate((u, z), axis=-1)+initial_value 
+            initial_value= jnp.concatenate((u_hat, sigma* grad_u_hat_x), axis=-1)        
+            return jnp.concatenate((u, z), axis=-1)+ initial_value 
         elif n < 0:
             return jnp.concatenate((u, z), axis=-1)
         # Recursive computation for n > 0
@@ -257,6 +249,7 @@ class ScaSML_full_history(object):
         batch_size=x_t.shape[0]
         u_hat = self.GP.predict(x_t)
         
-        # Calculate and return the final u value
-        u = u_breve + u_hat
+        # Calculate and return the final u value, if |u_breve|<sqrt(var(u_hat))* |u_hat|, return u_breve+u_hat, else return u_hat
+        uncertainty = jnp.sqrt(jnp.var(u_hat))
+        u = jnp.where(jnp.abs(u_breve) < uncertainty* jnp.abs(u_hat), u_breve + u_hat, u_hat)
         return u

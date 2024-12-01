@@ -636,11 +636,11 @@ class GP(object):
         '''Compute the PDE loss at x_t_infer'''
         raise NotImplementedError
     
-class GP_Complicated_HJB(GP):
+class GP_Linear_HJB(GP):
     '''Gaussian Kernel Solver for Complicated HJB'''
 
     def __init__(self, equation):
-        super(GP_Complicated_HJB, self).__init__(equation)
+        super(GP_Linear_HJB, self).__init__(equation)
 
     
     def rhs_f(self, x_t):
@@ -698,11 +698,11 @@ class GP_Complicated_HJB(GP):
         loss = dt_x_t_sol - (1 / d) * div_x_sol + laplacian_x_t_sol + 2
         return loss
 
-class GP_Explicit_Solution_Example(GP):
-    '''Gaussian Kernel Solver for the Explicit Solution Example'''
+class GP_Grad_Dependent_Nonlinear(GP):
+    '''Gaussian Kernel Solver for the Grad_Dependent_Nonlinear'''
 
     def __init__(self, equation):
-        super(GP_Explicit_Solution_Example, self).__init__(equation)
+        super(GP_Grad_Dependent_Nonlinear, self).__init__(equation)
 
     
     def rhs_f(self, x_t):

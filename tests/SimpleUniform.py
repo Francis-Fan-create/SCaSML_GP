@@ -84,9 +84,10 @@ class SimpleUniform(object):
         self.solver1.GPsolver(xt_domain_train, xt_boundary_train)
     
         # Generate test data
-        data_domain_test, _ = eq.generate_data(num_domain, num_boundary)
-        xt_domain_test = data_domain_test[:, :self.dim + 1]
-        exact_sol = eq.exact_solution(xt_domain_test)
+        data_domain_test, data_boundary_test = eq.generate_test_data(num_domain, num_boundary, random = "LHS")
+        data_test = np.concatenate((data_domain_test, data_boundary_test), axis=0)
+        xt_test = data_test[:, :self.dim + 1]
+        exact_sol = eq.exact_solution(xt_test)
     
         errors1 = np.zeros(num_domain)
         errors2 = np.zeros(num_domain)
@@ -100,19 +101,19 @@ class SimpleUniform(object):
         # Measure the time and predict using solver1
         print("Predicting with solver1 on test data...")
         start = time.time()
-        sol1 = self.solver1.predict(xt_domain_test)
+        sol1 = self.solver1.predict(xt_test)
         time1 += time.time() - start
     
         # Measure the time and predict using solver2
         print("Predicting with solver2 on test data...")
         start = time.time()
-        sol2 = self.solver2.u_solve(n, rhomax, data_domain_test)
+        sol2 = self.solver2.u_solve(n, rhomax, data_test)
         time2 += time.time() - start
     
         # Measure the time and predict using solver3
         print("Predicting with solver3 on test data...")
         start = time.time()
-        sol3 = self.solver3.u_solve(n, rhomax, data_domain_test)
+        sol3 = self.solver3.u_solve(n, rhomax, data_test)
         time3 += time.time() - start
 
          # Compute the average error and relative error

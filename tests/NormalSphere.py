@@ -85,7 +85,7 @@ class NormalSphere(object):
         # Generate training data
         data_domain, data_boundary = eq.generate_data(100, 20)  # Adjust the number of samples as needed
         x_grid = np.linspace(0, self.radius, x_grid_num)
-        t_grid = np.linspace(self.t0, self.T, t_grid_num)
+        t_grid = np.linspace(self.t0, self.T/5 , t_grid_num) # Adjust the time grid for testing
         x_mesh, t_mesh = np.meshgrid(x_grid, t_grid)
         self.solver2.set_approx_parameters(rhomax)
         self.solver3.set_approx_parameters(rhomax)

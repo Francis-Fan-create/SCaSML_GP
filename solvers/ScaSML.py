@@ -42,7 +42,7 @@ class ScaSML:
         eq = self.equation
         u_hat = self.GP.predict(x_t)
         grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:, :-1]
-        val1 = eq.f(x_t, u_breve + u_hat, eq.sigma(x_t) * (grad_u_hat_x + z_breve))
+        val1 = eq.f(x_t, u_breve + u_hat, eq.sigma(x_t) * (grad_u_hat_x) + z_breve)
         val2 = eq.f(x_t, u_hat, eq.sigma(x_t) * grad_u_hat_x)
         return val1 - val2  # Light version
 
@@ -213,7 +213,7 @@ class ScaSML:
             batch_size=x_t.shape[0]
             u_hat = self.GP.predict(x_t)
             grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:,:-1]   
-            initial_value= jnp.concatenate((u_hat, grad_u_hat_x), axis=-1)        
+            initial_value= jnp.concatenate((u_hat, sigma* grad_u_hat_x), axis=-1)        
             return jnp.concatenate((u, z), axis=-1)+initial_value 
         elif n < 0:
             return jnp.concatenate((u, z), axis=-1)
@@ -287,5 +287,7 @@ class ScaSML:
         u_breve_z_breve = self.uz_solve(n, rho, x_t)
         u_breve = u_breve_z_breve[:, 0]
         u_hat = self.GP.predict(x_t)
-        u = u_breve + u_hat
+        # Calculate and return the final u value, if |u_breve|<sqrt(var(u_hat))* |u_hat|, return u_breve+u_hat, else return u_hat
+        uncertainty = jnp.sqrt(jnp.var(u_hat))
+        u = jnp.where(jnp.abs(u_breve) < uncertainty* jnp.abs(u_hat), u_breve + u_hat, u_hat)
         return u

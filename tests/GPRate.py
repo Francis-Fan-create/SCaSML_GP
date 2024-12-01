@@ -71,15 +71,17 @@ class GPRate(object):
             errors_list = []
     
             # Step 1: Generate a fixed test dataset
-            test_sample_size = 50  # Fixed size for test data
-            test_xt_values = geom.random_points(test_sample_size, random=random_method)  # Fixed test inputs
+            test_sample_size_domain = 50  # Fixed size for test data
+            test_sample_size_boundary = 10  # Fixed size for test data
+            test_xt_values_domain, test_xt_values_boundary = eq.generate_test_data(test_sample_size_domain, test_sample_size_boundary,random=random_method)  # Fixed test inputs
+            test_xt_values = np.concatenate((test_xt_values_domain, test_xt_values_boundary), axis=0)
             test_exact_sol = eq.exact_solution(test_xt_values)  # Fixed test outputs
     
             # Fix training sample sizes
             train_domain = 100
             train_boundary = 20
             training_xt_values = geom.random_points(train_domain, random=random_method)  # Training inputs
-            _, data_boundary = eq.generate_data(1, train_boundary)  # Training outputs
+            _, data_boundary = eq.generate_data(0, train_boundary)  # Training outputs
     
             for GN_steps in GN_steps_list:
                 # Step 3: Train the GP model with varying GN_steps

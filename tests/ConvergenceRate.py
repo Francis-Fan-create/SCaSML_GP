@@ -93,16 +93,19 @@ class ConvergenceRate(object):
         # Define a range of training iterations
         GN_steps_list = range(200, 1100, 100)
         error1_list = []
-        error_ratio3_list = []
+        # error2_list = []
+        error3_list = []
         GN_steps_output_list = []
     
         # Generate test data (fixed)
-        xt_values = geom.random_points(n_samples, random="LHS")
+        n_samples_domain = n_samples
+        n_samples_boundary = int(n_samples/5)
+        xt_values_domain, xt_values_boundary = eq.generate_test_data(n_samples_domain, n_samples_boundary , random='LHS')
+        xt_values = np.concatenate((xt_values_domain, xt_values_boundary), axis=0)
         exact_sol = eq.exact_solution(xt_values)
     
         # Generate training data once
-        data_domain_train, _ = eq.generate_data(train_domain, 0)
-        _, data_boundary = eq.generate_data(1, train_boundary)
+        data_domain_train, data_boundary = eq.generate_data(train_domain, train_boundary)
     
         for GN_steps in GN_steps_list:
             print(f"Training solver1 with {GN_steps} iterations...")
@@ -125,31 +128,38 @@ class ConvergenceRate(object):
         
             # Compute error ratios
             error_value1 = np.mean(errors1)
-            error_ratio3 = np.mean(errors3) / (np.mean(errors2) + 1e-6)
+            # error_value2 = np.mean(errors2)
+            error_value3 = np.mean(errors3)
         
             error1_list.append(error_value1)
-            error_ratio3_list.append(error_ratio3)
+            # error2_list.append(error_value2)
+            error3_list.append(error_value3)
             GN_steps_output_list.append(GN_steps)
         
         # Plot error ratios
         plt.figure()
         plt.plot(GN_steps_output_list, np.log10(error1_list), label='Errors1')
-        plt.plot(GN_steps_output_list, np.log10(error_ratio3_list), label='Errors3 / Errors2')
+        # plt.plot(GN_steps_output_list, np.log10(error2_list), label='Errors2')
+        plt.plot(GN_steps_output_list, np.log10(error3_list), label='Errors3')
         
         # Fit lines to compute slopes
         log_GN_steps = np.log10(GN_steps_output_list)
         log_error1 = np.log10(error1_list)
-        log_error_ratio3 = np.log10(error_ratio3_list)
+        # log_error2 = np.log10(error2_list)
+        log_error3 = np.log10(error3_list)
         coeffs1 = np.polyfit(log_GN_steps, log_error1, 1)
-        coeffs3 = np.polyfit(log_GN_steps, log_error_ratio3, 1)
+        # coeffs2 = np.polyfit(log_GN_steps, log_error2, 1)
+        coeffs3 = np.polyfit(log_GN_steps, log_error3, 1)
         fitted_line1 = np.polyval(coeffs1, log_GN_steps)
+        # fitted_line2 = np.polyval(coeffs2, log_GN_steps)
         fitted_line3 = np.polyval(coeffs3, log_GN_steps)
         
         plt.plot(GN_steps_output_list, fitted_line1, '--', label=f'Fit Line 1 (Slope: {coeffs1[0]:.2f})')
+        # plt.plot(GN_steps_output_list, fitted_line2, '--', label=f'Fit Line 2 (Slope: {coeffs2[0]:.2f})')
         plt.plot(GN_steps_output_list, fitted_line3, '--', label=f'Fit Line 3 (Slope: {coeffs3[0]:.2f})')
         
         plt.xlabel('Training Iterations (GN_steps)')
-        plt.ylabel('log10(Error) or log10(Error Ratio)')
+        plt.ylabel('log10(Error)')
         plt.title('ConvergenceRate Verification')
         plt.legend()
         plt.xscale('log')

@@ -187,7 +187,20 @@ class Equation(object):
     
     def geometry(self, t0, T):
         """
-        Geometry of the domain.
+        Geometry of the train domain.
+        
+        Args:
+            t0 (float): The initial time.
+            T (float): The terminal time.
+            
+        Raises:
+            NotImplementedError: This is a placeholder method.
+        """
+        raise NotImplementedError
+    
+    def test_geometry(self, t0, T):
+        """
+        Geometry of the test domain.
         
         Args:
             t0 (float): The initial time.
@@ -206,8 +219,17 @@ class Equation(object):
             NotImplementedError: This is a placeholder method.
         """
         raise NotImplementedError
+    
+    def generate_test_data(self):
+        """
+        Generate data for testing.
+        
+        Raises:
+            NotImplementedError: This is a placeholder method.
+        """
+        raise NotImplementedError
 
-class Explicit_Solution_Example(Equation):
+class Grad_Dependent_Nonlinear(Equation):
     '''
     Example of a high-dimensional PDE with an exact solution.
     '''
@@ -310,11 +332,31 @@ class Explicit_Solution_Example(Equation):
         self.t0 = t0
         self.T = T
         spacedomain = dde.geometry.Hypercube([-0.5] * (self.n_input - 1), [0.5] * (self.n_input - 1))  # Defines the spatial domain, for train
-        timedomain = dde.geometry.TimeDomain(t0, T)  # Defines the time domain.
+        timedomain = dde.geometry.TimeDomain(t0, T)  # Defines the time domain for train.
         geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
         self.geomx = spacedomain
         self.geomt = timedomain
         return geom
+    
+    def test_geometry(self, t0=0, T=0.5):
+        '''
+        Defines the geometry of the domain for the PDE.
+        
+        Parameters:
+        - t0 (float): Initial time.
+        - T (float): Terminal time.
+        
+        Returns:
+        - geom (dde.geometry.GeometryXTime): A GeometryXTime object representing the domain.
+        '''
+        self.t0 = t0
+        self.T = T
+        spacedomain = dde.geometry.Hypercube([-0.5] * (self.n_input - 1), [0.5] * (self.n_input - 1))  # Defines the spatial domain, for train
+        timedomain = dde.geometry.TimeDomain(t0, T/5)  # Defines the time domain for test.
+        geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
+        self.geomx = spacedomain
+        self.geomt = timedomain
+        return geom    
     
     def generate_data(self, num_domain=100, num_boundary=20):
         '''
@@ -332,7 +374,24 @@ class Explicit_Solution_Example(Equation):
         data2 = geom.random_boundary_points(num_boundary)  # Generates random points on the boundary.
         return data1, data2
 
-class Complicated_HJB(Equation):
+    def generate_test_data(self, num_domain=100, num_boundary=20, random='LHS'):
+        '''
+        Generates data for testing the PDE model.
+        
+        Parameters:
+        - num_domain (int): Number of points to sample in the domain.
+        - num_boundary (int): Number of points to sample on the boundary.
+        - random (str): The method of sampling. Defaults to 'LHS'.
+        
+        Returns:
+        - data (tuple): A tuple containing domain points and boundary points.
+        '''
+        geom = self.test_geometry()  # Defines the geometry of the domain.
+        data1 = geom.random_points(num_domain, random=random)  # Generates random points in the domain.
+        data2 = geom.random_boundary_points(num_boundary)  # Generates random points on the boundary.
+        return data1, data2
+    
+class Linear_HJB(Equation):
     '''
     Complicated HJB equation.
     '''
@@ -373,8 +432,7 @@ class Complicated_HJB(Equation):
         Returns:
         - (float): The drift coefficient.
         '''
-        dim = self.n_input - 1
-        return -1 / dim
+        return 0
     
     def sigma(self, x_t=0):
         '''
@@ -401,7 +459,9 @@ class Complicated_HJB(Equation):
         Returns:
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
-        return jnp.sqrt(2) * jnp.ones_like(u)  # Shape: (batch_size, n_output)
+        dim = self.n_input - 1
+        div = jnp.sum(z, axis=1, keepdims=True)/self.sigma(x_t)  # Computes the divergence of the gradient.
+        return 2 * jnp.ones_like(u)- (1/dim)*div  # Shape: (batch_size, n_output)
     
     @partial(jit,static_argnames=["self"])
     def exact_solution(self, x_t):
@@ -441,6 +501,26 @@ class Complicated_HJB(Equation):
         self.geomt = timedomain
         return geom
     
+    def test_geometry(self, t0=0, T=0.5):
+        '''
+        Defines the geometry of the domain for the PDE.
+        
+        Parameters:
+        - t0 (float): Initial time.
+        - T (float): Terminal time.
+        
+        Returns:
+        - geom (dde.geometry.GeometryXTime): A GeometryXTime object representing the domain.
+        '''
+        self.t0 = t0
+        self.T = T
+        spacedomain = dde.geometry.Hypercube([-0.5] * (self.n_input - 1), [0.5] * (self.n_input - 1))  # Defines the spatial domain, for train
+        timedomain = dde.geometry.TimeDomain(t0, T/5)  # Defines the time domain for test.
+        geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
+        self.geomx = spacedomain
+        self.geomt = timedomain
+        return geom   
+    
     def generate_data(self, num_domain=100, num_boundary=20):
         '''
         Generates data for training the PDE model.
@@ -454,5 +534,22 @@ class Complicated_HJB(Equation):
         '''
         geom = self.geometry()  # Defines the geometry of the domain.
         data1 = geom.random_points(num_domain)  # Generates random points in the domain.
+        data2 = geom.random_boundary_points(num_boundary)  # Generates random points on the boundary.
+        return data1, data2
+    
+    def generate_test_data(self, num_domain=100, num_boundary=20, random='LHS'):
+        '''
+        Generates data for testing the PDE model.
+        
+        Parameters:
+        - num_domain (int): Number of points to sample in the domain.
+        - num_boundary (int): Number of points to sample on the boundary.
+        - random (str): The method of sampling. Defaults to 'LHS'.
+        
+        Returns:
+        - data (tuple): A tuple containing domain points and boundary points.
+        '''
+        geom = self.test_geometry()  # Defines the geometry of the domain.
+        data1 = geom.random_points(num_domain, random=random)  # Generates random points in the domain.
         data2 = geom.random_boundary_points(num_boundary)  # Generates random points on the boundary.
         return data1, data2
