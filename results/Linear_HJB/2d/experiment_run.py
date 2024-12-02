@@ -10,7 +10,6 @@ from equations.equations import Linear_HJB
 from tests.NormalSphere import NormalSphere
 from tests.SimpleUniform import SimpleUniform
 from tests.ConvergenceRate import ConvergenceRate
-from tests.GPRate import GPRate
 from solvers.MLP import MLP
 from solvers.ScaSML import ScaSML
 from models.GP import GP_Linear_HJB as GP
@@ -44,12 +43,12 @@ if device.type == 'cuda':
 config.update("jax_enable_x64", True)
 
 #initialize wandb
-wandb.init(project="Linear_HJB", notes="10 d", tags=["Gaussian Process"],mode="disabled") #debug mode
-# wandb.init(project="Linear_HJB", notes="10 d", tags=["Gaussian Process"]) #working mode
+wandb.init(project="Linear_HJB", notes="2 d", tags=["Gaussian Process"],mode="disabled") #debug mode
+# wandb.init(project="Linear_HJB", notes="2 d", tags=["Gaussian Process"]) #working mode
 wandb.config.update({"device": device.type}) # record device type
 
 #initialize the equation
-equation=Linear_HJB(n_input=11,n_output=1)
+equation=Linear_HJB(n_input=3,n_output=1)
 
 #initialize the normal sphere test
 solver1=GP(equation=equation) #GP solver
@@ -57,18 +56,15 @@ solver2=MLP(equation=equation) #Multilevel Picard object
 solver3=ScaSML(equation=equation,GP=solver1) #ScaSML object
 
 
-# #run the test for NormalSphere
-# test1=NormalSphere(equation,solver1,solver2,solver3)
-# rhomax=test1.test(r"results/Linear_HJB/10d")
+#run the test for NormalSphere
+test1=NormalSphere(equation,solver1,solver2,solver3)
+rhomax=test1.test(r"results/Linear_HJB/2d")
 #run the test for SimpleUniform
 test2=SimpleUniform(equation,solver1,solver2,solver3)
-test2.test(r"results/Linear_HJB/10d")
+test2.test(r"results/Linear_HJB/2d")
 #run the test for ConvergenceRate
 test3=ConvergenceRate(equation,solver1,solver2,solver3)
-test3.test(r"results/Linear_HJB/10d")
-#run the test for GPRate
-test4=GPRate(equation,solver1)
-test4.test(r"results/Linear_HJB/10d")
+test3.test(r"results/Linear_HJB/2d")
 
 
 #finish wandb

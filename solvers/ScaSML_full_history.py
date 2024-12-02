@@ -249,7 +249,7 @@ class ScaSML_full_history(object):
         batch_size=x_t.shape[0]
         u_hat = self.GP.predict(x_t)
         
-        # Calculate and return the final u value, if |u_breve|<sqrt(var(u_hat))* |u_hat|, return u_breve+u_hat, else return u_hat
+        # Calculate and return the final u value, if |u_breve|<sqrt(var(u_hat)), return u_breve+u_hat, else return u_hat
         uncertainty = jnp.sqrt(jnp.var(u_hat))
-        u = jnp.where(jnp.abs(u_breve) < uncertainty* jnp.abs(u_hat), u_breve + u_hat, u_hat)
+        u = jnp.where(jnp.abs(u_breve) < uncertainty, u_breve + u_hat, u_hat)
         return u

@@ -44,7 +44,7 @@ class SimpleUniform(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=2, num_domain=60, num_boundary=12):
+    def test(self, save_path, rhomax=2, num_domain=250, num_boundary=50):
         '''
         Compares solvers on test data after training on a large training dataset.
     
@@ -73,8 +73,8 @@ class SimpleUniform(object):
         self.solver3.set_approx_parameters(rhomax)
     
         # Generate large training data
-        num_train_domain = 100  # Large number for training domain data
-        num_train_boundary = 20  # Large number for training boundary data
+        num_train_domain = 500  # Large number for training domain data
+        num_train_boundary = 100  # Large number for training boundary data
         data_domain_train, data_boundary_train = eq.generate_data(num_train_domain, num_train_boundary)
     
         # Train solver1 on large training data

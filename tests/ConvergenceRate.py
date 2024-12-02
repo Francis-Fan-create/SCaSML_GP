@@ -44,7 +44,7 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=2, n_samples=50):
+    def test(self, save_path, rhomax=2, n_samples=250):
         '''
         Compares solvers on different training iterations.
     
@@ -88,14 +88,13 @@ class ConvergenceRate(object):
         self.solver3.set_approx_parameters(rho_)
     
         # Fix training sample sizes
-        train_domain = 100
-        train_boundary = 20
+        train_domain = 500
+        train_boundary = 100
         # Define a range of training iterations
-        GN_steps_list = range(200, 1100, 100)
+        GN_steps_list = range(40*eq_dim, 40*eq_dim+1000, 100)
         error1_list = []
         # error2_list = []
         error3_list = []
-        GN_steps_output_list = []
     
         # Generate test data (fixed)
         n_samples_domain = n_samples
@@ -105,12 +104,12 @@ class ConvergenceRate(object):
         exact_sol = eq.exact_solution(xt_values)
     
         # Generate training data once
-        data_domain_train, data_boundary = eq.generate_data(train_domain, train_boundary)
+        data_domain_train, data_boundary_train = eq.generate_data(train_domain, train_boundary)
     
         for GN_steps in GN_steps_list:
             print(f"Training solver1 with {GN_steps} iterations...")
             # Train solver1 with fixed training sample size and varying GN_steps
-            self.solver1.GPsolver(data_domain_train, data_boundary, GN_steps=GN_steps)
+            self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
         
             # Predict with solver1
             sol1 = self.solver1.predict(xt_values)
@@ -123,46 +122,64 @@ class ConvergenceRate(object):
         
             # Compute errors
             errors1 = (sol1 - exact_sol) ** 2
-            errors2 = (sol2 - exact_sol) ** 2
+            # errors2 = (sol2 - exact_sol) ** 2
             errors3 = (sol3 - exact_sol) ** 2
         
             # Compute error ratios
-            error_value1 = np.mean(errors1)
-            # error_value2 = np.mean(errors2)
-            error_value3 = np.mean(errors3)
+            mean_error1 = np.mean(errors1)
+            # mean_error2 = np.mean(errors2)
+            mean_error3 = np.mean(errors3)
         
+            mean_exact_sol = np.mean(exact_sol ** 2 + 1e-6)
+            error_value1 = mean_error1 / mean_exact_sol
+            # error_value2 = mean_error2 / mean_exact_sol
+            error_value3 = mean_error3 / mean_exact_sol
+
             error1_list.append(error_value1)
             # error2_list.append(error_value2)
             error3_list.append(error_value3)
-            GN_steps_output_list.append(GN_steps)
         
         # Plot error ratios
         plt.figure()
-        plt.plot(GN_steps_output_list, np.log10(error1_list), label='Errors1')
-        # plt.plot(GN_steps_output_list, np.log10(error2_list), label='Errors2')
-        plt.plot(GN_steps_output_list, np.log10(error3_list), label='Errors3')
+        epsilon = 1e-10  # To avoid log(0)
+
+        GN_steps_array = np.array(GN_steps_list)
+        error1_array = np.array(error1_list)
+        # error2_array = np.array(error2_list)
+        error3_array = np.array(error3_list)
+
+        plt.plot(GN_steps_array, error1_array, marker='x', linestyle='-', label='GP')
+        # plt.plot(GN_steps_array, error2_array, marker='x', linestyle='-', label='MLP')
+        plt.plot(GN_steps_array, error3_array, marker='x', linestyle='-', label='ScaSML')
         
         # Fit lines to compute slopes
-        log_GN_steps = np.log10(GN_steps_output_list)
-        log_error1 = np.log10(error1_list)
-        # log_error2 = np.log10(error2_list)
-        log_error3 = np.log10(error3_list)
-        coeffs1 = np.polyfit(log_GN_steps, log_error1, 1)
-        # coeffs2 = np.polyfit(log_GN_steps, log_error2, 1)
-        coeffs3 = np.polyfit(log_GN_steps, log_error3, 1)
-        fitted_line1 = np.polyval(coeffs1, log_GN_steps)
-        # fitted_line2 = np.polyval(coeffs2, log_GN_steps)
-        fitted_line3 = np.polyval(coeffs3, log_GN_steps)
+        log_GN_steps = np.log10(GN_steps_array + epsilon)
+        log_error1 = np.log10(error1_array+ epsilon)
+        # log_error2 = np.log10(error2_array+ epsilon)
+        log_error3 = np.log10(error3_array+ epsilon) 
+        slope1, intercept1 = np.polyfit(log_GN_steps, log_error1, 1)
+        # slope2, intercept2 = np.polyfit(log_GN_steps, log_error2, 1)
+        slope3, intercept3 = np.polyfit(log_GN_steps, log_error3, 1)
+        fitted_line1 = 10 ** (intercept1 + slope1 * log_GN_steps)
+        # fitted_line2 = 10 ** (intercept2 + slope2 * log_GN_steps)
+        fitted_line3 = 10 ** (intercept3 + slope3 * log_GN_steps)
         
-        plt.plot(GN_steps_output_list, fitted_line1, '--', label=f'Fit Line 1 (Slope: {coeffs1[0]:.2f})')
-        # plt.plot(GN_steps_output_list, fitted_line2, '--', label=f'Fit Line 2 (Slope: {coeffs2[0]:.2f})')
-        plt.plot(GN_steps_output_list, fitted_line3, '--', label=f'Fit Line 3 (Slope: {coeffs3[0]:.2f})')
+        plt.plot(GN_steps_array, fitted_line1, linestyle='--', label=f'GP: slope={slope1:.2f}')
+        # plt.plot(GN_steps_array, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
+        plt.plot(GN_steps_array, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
+
+        plt.xscale('log')
+        plt.yscale('log')
+
+        plt.legend()
+        plt.grid(True, which="both", ls="--", linewidth=0.5)
         
         plt.xlabel('Training Iterations (GN_steps)')
-        plt.ylabel('log10(Error)')
+        plt.ylabel('Mean Relative L2 Error on Test Set')
         plt.title('ConvergenceRate Verification')
-        plt.legend()
-        plt.xscale('log')
+
+        plt.tight_layout()
+        
         plt.savefig(f'{save_path}/ConvergenceRate_Verification.png')
         plt.close()
     

@@ -10,7 +10,6 @@ from equations.equations import Grad_Dependent_Nonlinear
 from tests.NormalSphere import NormalSphere
 from tests.SimpleUniform import SimpleUniform
 from tests.ConvergenceRate import ConvergenceRate
-from tests.GPRate import GPRate
 from solvers.MLP_full_history import MLP_full_history
 from solvers.ScaSML_full_history import ScaSML_full_history
 from models.GP import GP_Grad_Dependent_Nonlinear as GP
@@ -44,12 +43,12 @@ if device.type == 'cuda':
 config.update("jax_enable_x64", True)
 
 #initialize wandb
-wandb.init(project="Grad_Dependent_Nonlinear", notes="100 d", tags=["Gaussian Process"],mode="disabled") #debug mode
-# wandb.init(project="Grad_Dependent_Nonlinear", notes="100 d", tags=["Gaussian Process"]) #working mode
+wandb.init(project="Grad_Dependent_Nonlinear", notes="2 d", tags=["Gaussian Process"],mode="disabled") #debug mode
+# wandb.init(project="Grad_Dependent_Nonlinear", notes="2 d", tags=["Gaussian Process"]) #working mode
 wandb.config.update({"device": device.type}) # record device type
 
 #initialize the equation
-equation=Grad_Dependent_Nonlinear(n_input=101,n_output=1)
+equation=Grad_Dependent_Nonlinear(n_input=3,n_output=1)
 
 #initialize the normal sphere test
 solver1=GP(equation=equation) #GP solver
@@ -59,17 +58,13 @@ solver3=ScaSML_full_history(equation=equation,GP=solver1) #ScaSML object
 
 #run the test for NormalSphere
 test1=NormalSphere(equation,solver1,solver2,solver3)
-rhomax=test1.test(r"results_full_history/Grad_Dependent_Nonlinear/10d")
-#run the test for SimpleUniform
-test2=SimpleUniform(equation,solver1,solver2,solver3)
-test2.test(r"results_full_history/Grad_Dependent_Nonlinear/10d")
-#run the test for ConvergenceRate
-test3=ConvergenceRate(equation,solver1,solver2,solver3)
-test3.test(r"results_full_history/Grad_Dependent_Nonlinear/10d")
-# #run the test for GPRate
-test4=GPRate(equation,solver1)
-test4.test(r"results_full_history/Grad_Dependent_Nonlinear/10d")
-
+rhomax=test1.test(r"results_full_history/Grad_Dependent_Nonlinear/2d")
+# #run the test for SimpleUniform
+# test2=SimpleUniform(equation,solver1,solver2,solver3)
+# test2.test(r"results_full_history/Grad_Dependent_Nonlinear/2d")
+# #run the test for ConvergenceRate
+# test3=ConvergenceRate(equation,solver1,solver2,solver3)
+# test3.test(r"results_full_history/Grad_Dependent_Nonlinear/2d")
 
 #finish wandb
 wandb.finish()
