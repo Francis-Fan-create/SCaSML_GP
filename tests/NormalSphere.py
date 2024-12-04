@@ -39,15 +39,17 @@ class NormalSphere(object):
         self.stderr=sys.stderr
         # Initialize the normal spheres
         self.equation = equation
+        self.equation.test_geometry()
         self.dim = equation.n_input - 1  # equation.n_input: int
         self.solver1 = solver1
         self.solver2 = solver2
         self.solver3 = solver3
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
-        self.radius = np.sqrt(self.dim * (self.T - self.t0) ** 2)  # radius: float, calculated based on dimension and time
+        self.test_T = equation.test_T
+        self.radius = np.sqrt(self.dim * (self.test_T - self.t0) ** 2)  # radius: float, calculated based on dimension and time
 
-    def test(self, save_path, rhomax=4, n_samples=100, x_grid_num=100, t_grid_num=10):
+    def test(self, save_path, rhomax=2, n_samples=100, x_grid_num=100, t_grid_num=10):
         '''
         Compares solvers on different distances on the sphere.
     
@@ -85,7 +87,7 @@ class NormalSphere(object):
         # Generate training data
         data_domain, data_boundary = eq.generate_data(1000, 200)  # Adjust the number of samples as needed
         x_grid = np.linspace(0, self.radius, x_grid_num)
-        t_grid = np.linspace(self.t0, self.T/5 , t_grid_num) # Adjust the time grid for testing
+        t_grid = np.linspace(self.t0, self.test_T , t_grid_num) # Adjust the time grid for testing
         x_mesh, t_mesh = np.meshgrid(x_grid, t_grid)
         self.solver2.set_approx_parameters(rhomax)
         self.solver3.set_approx_parameters(rhomax)
@@ -240,7 +242,7 @@ class NormalSphere(object):
         norm =TwoSlopeNorm(vmin=-(1e-12), vcenter=0, vmax=vmax)
         # Plot the relative errors
         plt.figure()
-        plt.imshow(rel_error1, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(rel_error1, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("GP rel L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
@@ -251,7 +253,7 @@ class NormalSphere(object):
         print(f"GP rel L2, rho={rhomax}->","min:",np.min(rel_error1),"max:",np.max(rel_error1),"mean:",np.mean(rel_error1))
 
         plt.figure()
-        plt.imshow(rel_error2, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(rel_error2, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("MLP rel L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
@@ -262,7 +264,7 @@ class NormalSphere(object):
         print(f"MLP rel L2, rho={rhomax}->","min:",np.min(rel_error2),"max:",np.max(rel_error2),"mean:",np.mean(rel_error2))
 
         plt.figure()
-        plt.imshow(rel_error3, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(rel_error3, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("ScaSML rel L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
@@ -279,7 +281,7 @@ class NormalSphere(object):
         norm =TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
         # Plot the real solution
         plt.figure()
-        plt.imshow(real_sol_abs, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(real_sol_abs, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("Real Solution")
         plt.xlabel("distance from origin")
@@ -291,7 +293,7 @@ class NormalSphere(object):
         
         # Plot the errors
         plt.figure()
-        plt.imshow(errors1, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(errors1, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("GP L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
@@ -302,7 +304,7 @@ class NormalSphere(object):
         print(f"GP L2, rho={rhomax}->","min:",np.min(errors1),"max:",np.max(errors1),"mean:",np.mean(errors1))
 
         plt.figure()
-        plt.imshow(errors2, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(errors2, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("MLP L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
@@ -313,7 +315,7 @@ class NormalSphere(object):
         print(f"MLP L2, rho={rhomax}->","min:",np.min(errors2),"max:",np.max(errors2),"mean:",np.mean(errors2))
 
         plt.figure()
-        plt.imshow(errors3, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(errors3, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("ScaSML L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
@@ -324,7 +326,7 @@ class NormalSphere(object):
         print(f"ScaSML L2, rho={rhomax}->","min:",np.min(errors3),"max:",np.max(errors3),"mean:",np.mean(errors3))
 
         plt.figure()
-        plt.imshow(errors_13, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(errors_13, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("GP L2 - ScaSML L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
@@ -334,7 +336,7 @@ class NormalSphere(object):
         wandb.log({"GP L2 - ScaSML L2": wandb.Image(f"{save_path}/GP_ScaSML_L2_rho={rhomax}.png")} )
 
         plt.figure()
-        plt.imshow(errors_23, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(errors_23, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("MLP L2 - ScaSML L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")
@@ -344,7 +346,7 @@ class NormalSphere(object):
         wandb.log({"MLP L2 - ScaSML L2": wandb.Image(f"{save_path}/MLP_ScaSML_L2_rho={rhomax}.png")} )
 
         plt.figure()
-        plt.imshow(errors_12, extent=[0, self.radius, self.t0, self.T], aspect='auto', cmap='RdBu_r',norm=norm)
+        plt.imshow(errors_12, extent=[0, self.radius, self.t0, self.test_T], aspect='auto', cmap='RdBu_r',norm=norm)
         plt.colorbar()
         plt.title("GP L2 - MLP L2, rho={:d}".format(rhomax))
         plt.xlabel("distance from origin")

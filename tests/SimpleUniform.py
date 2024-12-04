@@ -44,7 +44,7 @@ class SimpleUniform(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=4, num_domain=250, num_boundary=50):
+    def test(self, save_path, rhomax=2, num_domain=250, num_boundary=50):
         '''
         Compares solvers on test data after training on a large training dataset.
     

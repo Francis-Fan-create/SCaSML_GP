@@ -44,7 +44,7 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=4, n_samples=250):
+    def test(self, save_path, rhomax=2, n_samples=250):
         '''
         Compares solvers on different training iterations.
     
