@@ -56,9 +56,9 @@ solver2=MLP(equation=equation) #Multilevel Picard object
 solver3=ScaSML(equation=equation,GP=solver1) #ScaSML object
 
 
-#run the test for NormalSphere
-test1=NormalSphere(equation,solver1,solver2,solver3)
-rhomax=test1.test(r"results/Grad_Dependent_Nonlinear/5d")
+# #run the test for NormalSphere
+# test1=NormalSphere(equation,solver1,solver2,solver3)
+# rhomax=test1.test(r"results/Grad_Dependent_Nonlinear/5d")
 #run the test for SimpleUniform
 test2=SimpleUniform(equation,solver1,solver2,solver3)
 test2.test(r"results/Grad_Dependent_Nonlinear/5d")

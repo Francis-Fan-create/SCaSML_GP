@@ -47,7 +47,7 @@ class NormalSphere(object):
         self.T = equation.T  # equation.T: float
         self.radius = np.sqrt(self.dim * (self.T - self.t0) ** 2)  # radius: float, calculated based on dimension and time
 
-    def test(self, save_path, rhomax=2, n_samples=100, x_grid_num=100, t_grid_num=10):
+    def test(self, save_path, rhomax=4, n_samples=100, x_grid_num=100, t_grid_num=10):
         '''
         Compares solvers on different distances on the sphere.
     
