@@ -281,7 +281,7 @@ class MLP:
         Approximate the solution of the PDE, return the value of u(x_t), batch-wise.
         
         Parameters:
-            n (int): Number of backward Euler samples needed.
+            n (int): Index of summands in quadratic sum.
             rho (int): Current level.
             x_t (array): A batch of spatial-temporal coordinates, shape (batch_size, n_input).
         

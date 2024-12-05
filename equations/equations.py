@@ -331,8 +331,9 @@ class Grad_Dependent_Nonlinear(Equation):
         '''
         self.t0 = t0
         self.T = T
-        spacedomain = dde.geometry.Hypercube([-0.5] * (self.n_input - 1), [0.5] * (self.n_input - 1))  # Defines the spatial domain, for train
-        timedomain = dde.geometry.TimeDomain(t0, T)  # Defines the time domain for train.
+        self.radius = 0.5
+        spacedomain = dde.geometry.Hypercube([-self.radius] * (self.n_input - 1), [self.radius] * (self.n_input - 1))  # Defines the spatial domain, for train
+        timedomain = dde.geometry.TimeDomain(t0, self.T)  # Defines the time domain.
         geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
         self.geomx = spacedomain
         self.geomt = timedomain
@@ -352,7 +353,7 @@ class Grad_Dependent_Nonlinear(Equation):
         self.t0 = t0
         self.T = T
         self.test_T = T/5
-        self.test_radius = 0.1
+        self.test_radius = 0.5
         spacedomain = dde.geometry.Hypercube([-self.test_radius] * (self.n_input - 1), [self.test_radius] * (self.n_input - 1))  # Defines the spatial domain, for test.
         timedomain = dde.geometry.TimeDomain(t0, self.test_T)  # Defines the time domain for test.
         geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
@@ -497,8 +498,8 @@ class Linear_HJB(Equation):
         self.t0 = t0
         self.T = T
         self.radius = 0.5
-        spacedomain = dde.geometry.Hypercube([-0.5] * (self.n_input - 1), [0.5] * (self.n_input - 1))  # Defines the spatial domain, for train
-        timedomain = dde.geometry.TimeDomain(t0, T)  # Defines the time domain.
+        spacedomain = dde.geometry.Hypercube([-self.radius] * (self.n_input - 1), [self.radius] * (self.n_input - 1))  # Defines the spatial domain, for train
+        timedomain = dde.geometry.TimeDomain(t0, self.T)  # Defines the time domain.
         geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
         self.geomx = spacedomain
         self.geomt = timedomain

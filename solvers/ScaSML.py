@@ -277,7 +277,7 @@ class ScaSML:
         Approximate the solution of the PDE, return u(x_t) only.
 
         Parameters:
-            n (int): Number of backward Euler samples needed.
+            n (int): Index of summands in quadratic sum.
             rho (int): Current level.
             x_t (array): Spatial-temporal coordinates.
 

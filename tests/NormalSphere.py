@@ -17,7 +17,7 @@ class NormalSphere(object):
     Attributes:
     equation (object): An object representing the equation to solve.
     dim (int): The dimension of the input space minus one.
-    solver1 (object): A PyTorch model for the GP network.
+    solver1 (object): A jax Gaussian Process model.
     solver2 (object): An object for the MLP solver.
     solver3 (object): An object for the ScaSML solver.
     t0 (float): The initial time.
@@ -30,7 +30,7 @@ class NormalSphere(object):
 
         Parameters:
         equation (object): The equation object containing problem specifics.
-        solver1 (object): The GP network solver.
+        solver1 (object): The GP solver.
         solver2 (object): The MLP solver object.
         solver3 (object): The ScaSML solver object.
         '''

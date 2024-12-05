@@ -218,7 +218,7 @@ class MLP_full_history(object):
         Approximate the solution of the PDE, return the value of u(x_t), batchwisely.
         
         Parameters:
-            n (int): Number of backward Euler samples needed.
+            n (int): Index of summands in quadratic sum.
             rho (int): Current level.
             x_t (ndarray): A batch of spatial-temporal coordinates, shape (batch_size, n_input), where
                            batch_size is the number of samples in the batch and n_input is the number of input features (spatial dimensions + 1 for time).

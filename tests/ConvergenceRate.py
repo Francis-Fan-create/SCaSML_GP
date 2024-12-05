@@ -16,7 +16,7 @@ class ConvergenceRate(object):
     Attributes:
     equation (object): An object representing the equation to solve.
     dim (int): The dimension of the input space minus one.
-    solver1 (object): A PyTorch model for the GP network.
+    solver1 (object): A jax Gaussian Process model.
     solver2 (object): An object for the MLP solver.
     solver3 (object): An object for the ScaSML solver.
     t0 (float): The initial time.
@@ -24,18 +24,18 @@ class ConvergenceRate(object):
     '''
     def __init__(self, equation, solver1, solver2, solver3):
         '''
-        Initializes the normal spheres with given solvers and equation.
+        Initializes the converge rate test with given solvers and equation.
 
         Parameters:
         equation (object): The equation object containing problem specifics.
-        solver1 (object): The GP network solver.
+        solver1 (object): The GP solver.
         solver2 (object): The MLP solver object.
         solver3 (object): The ScaSML solver object.
         '''
         #save original stdout and stderr
         self.stdout=sys.stdout
         self.stderr=sys.stderr
-        # Initialize the normal spheres
+        # Initialize the parameters
         self.equation = equation
         self.dim = equation.n_input - 1  # equation.n_input: int
         self.solver1 = solver1

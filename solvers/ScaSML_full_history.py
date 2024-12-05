@@ -234,7 +234,7 @@ class ScaSML_full_history(object):
         Approximate the solution of the PDE, return the ndarray of u(x_t) only.
         
         Parameters:
-            n (int): The number of backward Euler samples needed.
+            n (int): Index of summands in quadratic sum.
             rho (int): The current level.
             x_t (ndarray): A batch of spatial-temporal coordinates, shape (batch_size, n_input).
             
