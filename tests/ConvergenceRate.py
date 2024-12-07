@@ -44,7 +44,7 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=2, n_samples=250):
+    def test(self, save_path, rhomax=2, n_samples=500):
         '''
         Compares solvers on different training iterations.
     
@@ -87,11 +87,12 @@ class ConvergenceRate(object):
         self.solver2.set_approx_parameters(rho_)
         self.solver3.set_approx_parameters(rho_)
     
-        # Fix training sample sizes
-        train_domain = 500
-        train_boundary = 100
-        # Define a range of training iterations
-        GN_steps_list = range(40*eq_dim, 40*eq_dim+1000, 100)
+        # Fix GN_steps
+        GN_steps = 1000 
+        # Build a list for training sizes
+        list_len = 7
+        train_sizes_domain = [100, 200, 400, 800, 1600, 3200, 6400]
+        train_sizes_boundary = [20, 40, 80, 160, 320, 640, 1280]
         error1_list = []
         # error2_list = []
         error3_list = []
@@ -103,19 +104,18 @@ class ConvergenceRate(object):
         xt_values = np.concatenate((xt_values_domain, xt_values_boundary), axis=0)
         exact_sol = eq.exact_solution(xt_values)
     
-        # Generate training data once
-        data_domain_train, data_boundary_train = eq.generate_data(train_domain, train_boundary)
     
-        for GN_steps in GN_steps_list:
+        for j in range(list_len):
             print(f"Training solver1 with {GN_steps} iterations...")
+            data_domain_train, data_boundary_train = eq.generate_data(train_sizes_domain[j], train_sizes_boundary[j])
             # Train solver1 with fixed training sample size and varying GN_steps
             self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
         
             # Predict with solver1
             sol1 = self.solver1.predict(xt_values)
         
-            # Solve with solver2 (baseline solver)
-            sol2 = self.solver2.u_solve(rho_, rho_, xt_values)
+            # # Solve with solver2 (baseline solver)
+            # sol2 = self.solver2.u_solve(rho_, rho_, xt_values)
         
             # Solve with solver3 using the trained solver1
             sol3 = self.solver3.u_solve(rho_, rho_, xt_values)
@@ -143,17 +143,19 @@ class ConvergenceRate(object):
         plt.figure()
         epsilon = 1e-10  # To avoid log(0)
 
-        GN_steps_array = np.array(GN_steps_list)
+        domain_sizes = np.array(train_sizes_domain)
+        boundary_sizes = np.array(train_sizes_boundary)
+        train_sizes = domain_sizes + boundary_sizes
         error1_array = np.array(error1_list)
         # error2_array = np.array(error2_list)
         error3_array = np.array(error3_list)
 
-        plt.plot(GN_steps_array, error1_array, marker='x', linestyle='-', label='GP')
-        # plt.plot(GN_steps_array, error2_array, marker='x', linestyle='-', label='MLP')
-        plt.plot(GN_steps_array, error3_array, marker='x', linestyle='-', label='ScaSML')
+        plt.plot(train_sizes, error1_array, marker='x', linestyle='-', label='GP')
+        # plt.plot(train_sizes, error2_array, marker='x', linestyle='-', label='MLP')
+        plt.plot(train_sizes, error3_array, marker='x', linestyle='-', label='ScaSML')
         
         # Fit lines to compute slopes
-        log_GN_steps = np.log10(GN_steps_array + epsilon)
+        log_GN_steps = np.log10(train_sizes + epsilon)
         log_error1 = np.log10(error1_array+ epsilon)
         # log_error2 = np.log10(error2_array+ epsilon)
         log_error3 = np.log10(error3_array+ epsilon) 
@@ -164,9 +166,9 @@ class ConvergenceRate(object):
         # fitted_line2 = 10 ** (intercept2 + slope2 * log_GN_steps)
         fitted_line3 = 10 ** (intercept3 + slope3 * log_GN_steps)
         
-        plt.plot(GN_steps_array, fitted_line1, linestyle='--', label=f'GP: slope={slope1:.2f}')
-        # plt.plot(GN_steps_array, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
-        plt.plot(GN_steps_array, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
+        plt.plot(train_sizes, fitted_line1, linestyle='--', label=f'GP: slope={slope1:.2f}')
+        # plt.plot(train_sizes, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
+        plt.plot(train_sizes, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
 
         plt.xscale('log')
         plt.yscale('log')
@@ -174,7 +176,7 @@ class ConvergenceRate(object):
         plt.legend()
         plt.grid(True, which="both", ls="--", linewidth=0.5)
         
-        plt.xlabel('Training Iterations (GN_steps)')
+        plt.xlabel('Training Size')
         plt.ylabel('Mean Relative L2 Error on Test Set')
         plt.title('ConvergenceRate Verification')
 

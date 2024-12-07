@@ -457,15 +457,30 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=1000):
+    def GPsolver(self, x_t_domain_full, x_t_boundary_full, GN_steps=1000):
         '''Solve the Gaussian process using Adam optimizer from Optax with Early Stopping and Exponentially Decaying Learning Rate'''
         optimizer_steps = GN_steps
         initial_learning_rate = 1e-2
         learning_rate_decay_steps = 100  # Number of steps before each decay
         learning_rate_decay_rate = 0.96  # Decay rate
         patience = 100
-        delta = 1e-5
+        delta = 1e-6
 
+        # # Apply SGD on a subset of the training data
+        # train_step_size_domain = 500
+        # train_step_size_boundary = 100
+
+        # # Sample the training data
+        # choosed_index_domain = random.choice(random.PRNGKey(0), x_t_domain_full.shape[0], (train_step_size_domain,))
+        # choosed_index_boundary = random.choice(random.PRNGKey(0), x_t_boundary_full.shape[0], (train_step_size_boundary,))
+        # x_t_domain = x_t_domain_full[choosed_index_domain]
+        # x_t_boundary = x_t_boundary_full[choosed_index_boundary]
+
+        # Use the full training data
+        x_t_domain = x_t_domain_full
+        x_t_boundary = x_t_boundary_full
+
+        # Compute the right-hand side and boundary condition
         rhs_f = self.rhs_f(x_t_domain)
         bdy_g = self.bdy_g(x_t_boundary)
 

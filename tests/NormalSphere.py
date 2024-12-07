@@ -85,7 +85,7 @@ class NormalSphere(object):
         eq_name = eq.__class__.__name__
         n = rhomax
         # Generate training data
-        data_domain, data_boundary = eq.generate_data(1000, 200)  # Adjust the number of samples as needed
+        data_domain, data_boundary = eq.generate_data(6400, 1280)  # Adjust the number of samples as needed
         x_grid = np.linspace(0, self.radius, x_grid_num)
         t_grid = np.linspace(self.t0, self.test_T , t_grid_num) # Adjust the time grid for testing
         x_mesh, t_mesh = np.meshgrid(x_grid, t_grid)

@@ -139,10 +139,10 @@ class ScaSML_full_history(object):
         
         # Generate Monte Carlo samples for backward Euler
         std_normal = random.normal(subkey, shape=(batch_size, MC, dim))
-        W = jnp.sqrt(T-t)[:, np.newaxis, np.newaxis] * std_normal  # Brownian increments, shape (batch_size, MC, dim)
+        dW = jnp.sqrt(T-t)[:, np.newaxis, np.newaxis] * std_normal  # Brownian increments, shape (batch_size, MC, dim)
         self.evaluation_counter+=MC
         X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC, dim)
-        disturbed_X = X + mu*(T-t)[:, np.newaxis, np.newaxis]+ sigma * W  # Disturbed spatial coordinates, shape (batch_size, MC, dim)
+        disturbed_X = X + mu*(T-t)[:, np.newaxis, np.newaxis]+ sigma * dW  # Disturbed spatial coordinates, shape (batch_size, MC, dim)
         
         # Initialize arrays for terminal and difference values
         terminals = jnp.zeros((batch_size, MC, 1))  # Terminal values, shape (batch_size, MC, 1)
@@ -168,14 +168,14 @@ class ScaSML_full_history(object):
         u = jnp.mean(differences + terminals, axis=1)  # Mean over Monte Carlo samples, shape (batch_size, 1)
 
         delta_t = (T - t + 1e-6)[:, jnp.newaxis]  # Avoid division by zero, shape (batch_size, 1)
-        z = jnp.sum(differences * W, axis=1) / (MC * delta_t)  # Compute z values, shape (batch_size, dim)           
+        z = jnp.sum(differences * std_normal, axis=1) / (MC * delta_t)  # Compute z values, shape (batch_size, dim)           
         # Recursive call for n > 0
         if n == 0:
             batch_size=x_t.shape[0]
             u_hat = self.GP.predict(x_t)
             grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:, :-1]   
             initial_value= jnp.concatenate((u_hat, sigma* grad_u_hat_x), axis=-1)        
-            return jnp.concatenate((u, z), axis=-1)+ initial_value 
+            return jnp.concatenate((u, z), axis=-1) + initial_value 
         elif n < 0:
             return jnp.concatenate((u, z), axis=-1)
         # Recursive computation for n > 0
@@ -185,13 +185,10 @@ class ScaSML_full_history(object):
             # Multiply tau by (T-t)
             sampled_time_steps = (tau * (T-t)[:, jnp.newaxis]).reshape((batch_size, MC, 1))  # Sample time steps, shape (batch_size, MC)
             X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC, dim)
-            W = jnp.zeros((batch_size, MC, dim))  # Initialize Brownian increments, shape (batch_size, MC, dim)
             simulated = jnp.zeros((batch_size, MC, dim + 1))  # Initialize array for simulated values, shape (batch_size, MC, dim + 1)
-
             std_normal = random.normal(subkey, shape=(batch_size, MC, dim))  # Generate standard normal samples
             dW =jnp.sqrt(sampled_time_steps) * std_normal  # Brownian increments for current time step, shape (batch_size, MC, dim)
             self.evaluation_counter+=MC*dim
-            W += dW  # Accumulate Brownian increments
             X += mu*(sampled_time_steps)+sigma * dW  # Update spatial coordinates
             co_solver_l = lambda X_t: self.uz_solve(n=l, rho=rho, x_t=X_t)  # Co-solver for level l
             co_solver_l_minus_1 = lambda X_t: self.uz_solve(n=l - 1, rho=rho, x_t=X_t)  # Co-solver for level l - 1
@@ -209,7 +206,7 @@ class ScaSML_full_history(object):
             # Update u and z values
             u += 2*(T-t)[:,jnp.newaxis]* jnp.mean(jnp.sqrt(tau)[:,:,jnp.newaxis]*y, axis=1)  # Update u values
             delta_t = (sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)
-            z += 2*(T-t)[:,jnp.newaxis] * jnp.mean((np.sqrt(tau)[:,:,jnp.newaxis]*y * W / (delta_t)),axis=1)  # Update z values                
+            z += 2*(T-t)[:,jnp.newaxis] * jnp.mean((np.sqrt(tau)[:,:,jnp.newaxis]*y * std_normal / (delta_t)),axis=1)  # Update z values                
             # Adjust u and z values if l > 0
             if l:
                 # Compute Compute u and z values for current quadrature point using vmap
@@ -226,7 +223,7 @@ class ScaSML_full_history(object):
                 # Update u and z values
                 u -= 2*(T-t)[:,jnp.newaxis]* jnp.mean(jnp.sqrt(tau)[:,:,jnp.newaxis]*y, axis=1)  # Update u values
                 delta_t = (sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)
-                z -= 2*(T-t)[:,jnp.newaxis] * jnp.mean((jnp.sqrt(tau)[:,:,jnp.newaxis]*y * W / (delta_t)),axis=1)  # Update z values  
+                z -= 2*(T-t)[:,jnp.newaxis] * jnp.mean((jnp.sqrt(tau)[:,:,jnp.newaxis]*y * std_normal / (delta_t)),axis=1)  # Update z values  
         return jnp.concatenate((u, z), axis=-1)  # Concatenate adjusted u and z values, shape (batch_size, dim + 1)
 
     def u_solve(self, n, rho, x_t):
