@@ -157,7 +157,7 @@ class MLP_full_history(object):
         u = jnp.mean(differences + terminals, axis=1)  # Mean over Monte Carlo samples, shape (batch_size, 1)
 
         delta_t = (T - t + 1e-6)[:, jnp.newaxis]  # Avoid division by zero, shape (batch_size, 1)
-        z = jnp.sum(differences * std_normal, axis=1) / (MC * delta_t)  # Compute z values, shape (batch_size, dim)        
+        z = jnp.mean(differences * std_normal, axis=1) / (delta_t)  # Compute z values, shape (batch_size, dim)        
         # Recursive call for n > 0
         if n <= 0:
             return jnp.concatenate((u, z), axis=-1)  # Concatenate u and z values, shape (batch_size, dim + 1)

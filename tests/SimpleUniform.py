@@ -73,8 +73,8 @@ class SimpleUniform(object):
         self.solver3.set_approx_parameters(rhomax)
     
         # Generate large training data
-        num_train_domain = 6400  # Large number for training domain data
-        num_train_boundary = 1280  # Large number for training boundary data
+        num_train_domain = 1000  # Large number for training domain data
+        num_train_boundary = 200  # Large number for training boundary data
         data_domain_train, data_boundary_train = eq.generate_data(num_train_domain, num_train_boundary)
     
         # Train solver1 on large training data

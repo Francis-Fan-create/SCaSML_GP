@@ -90,9 +90,9 @@ class ConvergenceRate(object):
         # Fix GN_steps
         GN_steps = 1000 
         # Build a list for training sizes
-        list_len = 7
-        train_sizes_domain = [100, 200, 400, 800, 1600, 3200, 6400]
-        train_sizes_boundary = [20, 40, 80, 160, 320, 640, 1280]
+        list_len = 10
+        train_sizes_domain = range(100, 1100, 100)
+        train_sizes_boundary = range(20, 220, 20)
         error1_list = []
         # error2_list = []
         error3_list = []

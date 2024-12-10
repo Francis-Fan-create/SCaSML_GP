@@ -457,28 +457,14 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain_full, x_t_boundary_full, GN_steps=1000):
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=1000):
         '''Solve the Gaussian process using Adam optimizer from Optax with Early Stopping and Exponentially Decaying Learning Rate'''
         optimizer_steps = GN_steps
-        initial_learning_rate = 1e-2
-        learning_rate_decay_steps = 100  # Number of steps before each decay
+        initial_learning_rate = 1e-1
+        learning_rate_decay_steps = 1000  # Number of steps before each decay
         learning_rate_decay_rate = 0.96  # Decay rate
-        patience = 100
-        delta = 1e-6
-
-        # # Apply SGD on a subset of the training data
-        # train_step_size_domain = 500
-        # train_step_size_boundary = 100
-
-        # # Sample the training data
-        # choosed_index_domain = random.choice(random.PRNGKey(0), x_t_domain_full.shape[0], (train_step_size_domain,))
-        # choosed_index_boundary = random.choice(random.PRNGKey(0), x_t_boundary_full.shape[0], (train_step_size_boundary,))
-        # x_t_domain = x_t_domain_full[choosed_index_domain]
-        # x_t_boundary = x_t_boundary_full[choosed_index_boundary]
-
-        # Use the full training data
-        x_t_domain = x_t_domain_full
-        x_t_boundary = x_t_boundary_full
+        # patience = 100
+        # delta = 1e-6
 
         # Compute the right-hand side and boundary condition
         rhs_f = self.rhs_f(x_t_domain)
@@ -511,8 +497,8 @@ class GP(object):
         )
         opt_state = optimizer.init(sol)
 
-        best_loss = J_now
-        epochs_since_improvement = 0
+        # best_loss = J_now
+        # epochs_since_improvement = 0
 
         for iter_step in range(optimizer_steps):
             gradient = grad_J(sol, rhs_f, bdy_g, L)
@@ -526,21 +512,21 @@ class GP(object):
             J_now = self.loss_function(sol, rhs_f, bdy_g, L)
             J_hist.append(J_now)
     
-            # Check for improvement
-            if J_now < best_loss - delta:
-                best_loss = J_now
-                epochs_since_improvement = 0
-            else:
-                epochs_since_improvement += 1
+            # # Check for improvement
+            # if J_now < best_loss - delta:
+            #     best_loss = J_now
+            #     epochs_since_improvement = 0
+            # else:
+            #     epochs_since_improvement += 1
     
             # Log update details
             if iter_step % 10 == 0 or iter_step == optimizer_steps - 1:
                 print(f"Iteration {iter_step}: Loss = {J_now}, Gradient norm = {grad_norm}")
     
-            # Early stopping based on patience
-            if epochs_since_improvement >= patience:
-                print(f"Early stopping at iteration {iter_step} due to no improvement in loss for {patience} steps.")
-                break
+            # # Early stopping based on patience
+            # if epochs_since_improvement >= patience:
+            #     print(f"Early stopping at iteration {iter_step} due to no improvement in loss for {patience} steps.")
+            #     break
     
             # Early stopping if gradient norm is small
             if grad_norm < 1e-5:
@@ -624,7 +610,7 @@ class GP(object):
             return sol
     
         # Vectorize the solution function over x_t_infer
-        solution_function_vectorized = vmap(solution_function)
+        solution_function_vectorized = jit(vmap(solution_function))
     
         # Compute the predictions
         sol_infer = solution_function_vectorized(x_t_infer)  # Shape: (N_infer,)
