@@ -167,6 +167,7 @@ class NormalSphere(object):
         # Create a boxplot
         plt.boxplot(errors, labels=['GP_L2', 'MLP_L2', 'ScaSML_L2'])
         plt.xticks(rotation=45)
+        plt.yscale('log')
         # Add a title and labels
         plt.title('L2 Error Distribution')
         plt.ylabel('L2 Error Value')
@@ -188,6 +189,7 @@ class NormalSphere(object):
         # Create an error bar plot
         plt.errorbar(x_pos, means, yerr=stds, capsize=5, capthick=2, ecolor='black',  marker='s', markersize=7, mfc='red', mec='black')
         plt.xticks(x_pos, labels, rotation=45)
+        plt.yscale('log')
         # Add a title and labels
         plt.title('L2 Error Distribution')
         plt.ylabel('L2 Error Value')
@@ -203,6 +205,7 @@ class NormalSphere(object):
         # Create a boxplot
         plt.boxplot(rel_errors, labels=['GP_L2', 'MLP_L2', 'ScaSML_L2'])
         plt.xticks(rotation=45)
+        plt.yscale('log')
         # Add a title and labels
         plt.title('Relative Error Distribution')
         plt.ylabel('Relative Error Value')
@@ -225,6 +228,8 @@ class NormalSphere(object):
         plt.errorbar(x_pos, means, yerr=stds, capsize=5, capthick=2, ecolor='black',  marker='s', markersize=7, mfc='red', mec='black')
         # Set the x-ticks to use the labels and rotate them for better readability
         plt.xticks(x_pos, labels, rotation=45)
+        # Set the y-axis to use a logarithmic scale
+        plt.yscale('log')
         # Add a title and labels to the plot
         plt.title('Relative Error Distribution')
         plt.ylabel('Relative Error Value')

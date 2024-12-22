@@ -460,7 +460,7 @@ class GP(object):
     def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=1000):
         '''Solve the Gaussian process using Adam optimizer from Optax with Early Stopping and Exponentially Decaying Learning Rate'''
         optimizer_steps = GN_steps
-        initial_learning_rate = 1e-1
+        initial_learning_rate = 5e-2  # Initial learning rate
         learning_rate_decay_steps = 1000  # Number of steps before each decay
         learning_rate_decay_rate = 0.96  # Decay rate
         # patience = 100
@@ -490,10 +490,10 @@ class GP(object):
             staircase=True
         )
 
-        # Initialize Adam optimizer with gradient clipping and learning rate decay
+        # Initialize Adan optimizer with gradient clipping and learning rate decay
         optimizer = optax.chain(
             optax.clip_by_global_norm(1.0),
-            optax.adam(learning_rate=scheduler)
+            optax.adan(learning_rate=scheduler)
         )
         opt_state = optimizer.init(sol)
 

@@ -170,7 +170,6 @@ class ConvergenceRate(object):
         # plt.plot(train_sizes, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
         plt.plot(train_sizes, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
 
-        plt.xscale('log')
         plt.yscale('log')
 
         plt.legend()

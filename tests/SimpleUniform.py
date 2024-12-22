@@ -154,6 +154,7 @@ class SimpleUniform(object):
         # plt.boxplot(errors, labels=['GP_l1', 'MLP_l1', 'ScaSML_l1', 'GP_l1 - ScaSML_l1', 'MLP_l1 - ScaSML_l1'])
         plt.boxplot(errors, labels=['GP_L2', 'MLP_L2', 'ScaSML_L2'])
         plt.xticks(rotation=45)
+        plt.yscale('log')
         # Add a title and labels
         plt.title('L2 Error Distribution')
         plt.ylabel('L2 Error Value')
@@ -175,6 +176,7 @@ class SimpleUniform(object):
         # Create an error bar plot
         plt.errorbar(x_pos, means, yerr=stds, capsize=5, capthick=2, ecolor='black',  marker='s', markersize=7, mfc='red', mec='black')
         plt.xticks(x_pos, labels, rotation=45)
+        plt.yscale('log')
         # Add a title and labels
         plt.title('L2 Error Distribution')
         plt.ylabel('L2 Error Value')
