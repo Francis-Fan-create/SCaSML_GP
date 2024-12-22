@@ -18,7 +18,7 @@ without any boundary constraints.
 
 The nonlinear term is given by
 $$
-F(u,z)(x,t)=-\frac{1}{d\sigma} z+2
+F(u,z)(x,t)=2
 $$
 
 This PDE has an explicit solution at time $t$
@@ -100,12 +100,12 @@ $$
 
 Specifically, we consider the problem for
 $$
-d=100, \mu=0,\sigma=\sqrt{2}, D=[-0.5,0.5]^{100}, s=0, T=0.5
+d=5, \mu=-\frac1d,\sigma=\sqrt{2}, D=[-0.5,0.5]^{100}, s=0, T=0.5
 $$
 
 and
 
 $$
-d=250,\mu=0, \sigma=\sqrt{2}, D=[-0.5,0.5]^{250}, s=0, T=0.5
+d=10,\mu=-\frac1d, \sigma=\sqrt{2}, D=[-0.5,0.5]^{250}, s=0, T=0.5
 $$
 

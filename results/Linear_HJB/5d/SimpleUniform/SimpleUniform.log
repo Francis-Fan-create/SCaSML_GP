@@ -1,12 +1,12 @@
-Total time for GP: 0.2661900520324707 seconds
-Total time for MLP: 3.4841034412384033 seconds
-Total time for ScaSML: 40.041760206222534 seconds
-GP rel L2, rho=2-> 0.28256333656957017
-MLP rel L2, rho=2-> 3.093263169039685
-ScaSML rel L2, rho=2-> 0.07449239387667846
+Total time for GP: 0.6013035774230957 seconds
+Total time for MLP: 6.894636392593384 seconds
+Total time for ScaSML: 50.83668255805969 seconds
+GP rel L2, rho=2-> 0.2825598324749239
+MLP rel L2, rho=2-> 3.189824200818483
+ScaSML rel L2, rho=2-> 0.058105426739217175
 Real Solution-> 0.45357823
-GP L2, rho=2-> min: 0.11554363082523823 max: 0.3273265633500689 mean: 0.18501885111719563
-MLP L2, rho=2-> min: 7.614399724391225e-12 max: 31.184911654214382 mean: 2.0254290761390012
-ScaSML L2, rho=2-> min: 3.714563485808672e-12 max: 0.4453580437499639 mean: 0.04877666472712841
-GP L2 - ScaSML L2, rho=2-> positive count: 327000 negative count: 4800 positive sum: 49188.18255084991 negative sum: -140.99545042570963
-MLP L2 - ScaSML L2, rho=2-> positive count: 328610 negative count: 31390 positive sum: 713008.0626157785 negative sum: -1413.1945075043548
+GP L2, rho=2-> min: 0.1155481065731184 max: 0.32731432188394893 mean: 0.1850165566809339
+MLP L2, rho=2-> min: 4.911351019588435e-12 max: 32.08021179357416 mean: 2.088656002106467
+ScaSML L2, rho=2-> min: 3.795845303402148e-12 max: 0.3398655164993032 mean: 0.038046688680424136
+GP L2 - ScaSML L2, rho=2-> positive count: 343800 negative count: 600 positive sum: 52914.80913567002 negative sum: -5.656655486523608
+MLP L2 - ScaSML L2, rho=2-> positive count: 332908 negative count: 27092 positive sum: 739095.004127524 negative sum: -875.6512941484154

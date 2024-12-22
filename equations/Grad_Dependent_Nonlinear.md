@@ -19,7 +19,7 @@ without any boundary constraints.
 
 Then nonlinear term is given by
 $$
-F(u,z)(x,t)=(\sigma u-\frac {1}{d\sigma} -\frac{\sigma}{2})\sum_i z
+F(u,z)(x,t)=\sigma u\sum_i z
 $$
 
 
@@ -97,11 +97,11 @@ $$
 
 Specifically, we consider the problem for
 $$
-d=100, \mu=0, \sigma=0.25, D=[-0.5,0.5]^{100}, s=0, T=0.5
+d=100, \mu=-(\frac {1}{d\sigma} +\frac{\sigma}{2}), \sigma=0.25, D=[-0.5,0.5]^{100}, s=0, T=0.5
 $$
 
 and
 
 $$
-d=250, \mu=0, \sigma=0.25, D=[-0.5,0.5]^{250}, s=0, T=0.5
+d=250, \mu=-(\frac {1}{d\sigma} +\frac{\sigma}{2}), \sigma=0.25, D=[-0.5,0.5]^{250}, s=0, T=0.5
 $$

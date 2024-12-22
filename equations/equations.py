@@ -268,7 +268,10 @@ class Grad_Dependent_Nonlinear(Equation):
         Returns:
         - (float): The drift coefficient.
         '''
-        return 0
+        sigma = self.sigma()
+        d = self.n_input - 1
+        result = -1/(d * sigma) - sigma/ 2
+        return result
     
     def sigma(self, x_t=0):
         '''
@@ -295,8 +298,7 @@ class Grad_Dependent_Nonlinear(Equation):
         Returns:
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
-        dim = self.n_input - 1
-        result = self.sigma() * (u - (2 + self.sigma() ** 2 * dim) / (2 * self.sigma() ** 2 * dim)) * jnp.sum(z, axis=1, keepdims=True)
+        result = self.sigma() * u * jnp.sum(z, axis=1, keepdims=True)
         return result
     
     @partial(jit,static_argnames=["self"])
@@ -435,7 +437,8 @@ class Linear_HJB(Equation):
         Returns:
         - (float): The drift coefficient.
         '''
-        return 0
+        d = self.n_input - 1
+        return -1/d
     
     def sigma(self, x_t=0):
         '''
@@ -462,9 +465,7 @@ class Linear_HJB(Equation):
         Returns:
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
-        dim = self.n_input - 1
-        div = jnp.sum(z, axis=1, keepdims=True)/self.sigma(x_t)  # Computes the divergence of the gradient.
-        return 2 * jnp.ones_like(u)- (1/dim)*div  # Shape: (batch_size, n_output)
+        return 2 * jnp.ones_like(u)  # Shape: (batch_size, n_output)
     
     @partial(jit,static_argnames=["self"])
     def exact_solution(self, x_t):
