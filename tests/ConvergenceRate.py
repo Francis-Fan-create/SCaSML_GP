@@ -94,7 +94,7 @@ class ConvergenceRate(object):
         train_sizes_domain = range(100, 1100, 100)
         train_sizes_boundary = range(20, 220, 20)
         error1_list = []
-        # error2_list = []
+        error2_list = []
         error3_list = []
     
         # Generate test data (fixed)
@@ -106,7 +106,7 @@ class ConvergenceRate(object):
     
     
         for j in range(list_len):
-            print(f"Training solver1 with {GN_steps} iterations...")
+            print(f"Training solver1 with {n_samples_domain} domain points and {n_samples_boundary} boundary points...")
             data_domain_train, data_boundary_train = eq.generate_data(train_sizes_domain[j], train_sizes_boundary[j])
             # Train solver1 with fixed training sample size and varying GN_steps
             self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
@@ -114,29 +114,29 @@ class ConvergenceRate(object):
             # Predict with solver1
             sol1 = self.solver1.predict(xt_values)
         
-            # # Solve with solver2 (baseline solver)
-            # sol2 = self.solver2.u_solve(rho_, rho_, xt_values)
+            # Solve with solver2 (baseline solver)
+            sol2 = self.solver2.u_solve(rho_, rho_, xt_values)
         
             # Solve with solver3 using the trained solver1
             sol3 = self.solver3.u_solve(rho_, rho_, xt_values)
         
             # Compute errors
             errors1 = (sol1 - exact_sol) ** 2
-            # errors2 = (sol2 - exact_sol) ** 2
+            errors2 = (sol2 - exact_sol) ** 2
             errors3 = (sol3 - exact_sol) ** 2
         
             # Compute error ratios
             mean_error1 = np.mean(errors1)
-            # mean_error2 = np.mean(errors2)
+            mean_error2 = np.mean(errors2)
             mean_error3 = np.mean(errors3)
         
             mean_exact_sol = np.mean(exact_sol ** 2 + 1e-6)
             error_value1 = mean_error1 / mean_exact_sol
-            # error_value2 = mean_error2 / mean_exact_sol
+            error_value2 = mean_error2 / mean_exact_sol
             error_value3 = mean_error3 / mean_exact_sol
 
             error1_list.append(error_value1)
-            # error2_list.append(error_value2)
+            error2_list.append(error_value2)
             error3_list.append(error_value3)
         
         # Plot error ratios
@@ -147,27 +147,27 @@ class ConvergenceRate(object):
         boundary_sizes = np.array(train_sizes_boundary)
         train_sizes = domain_sizes + boundary_sizes
         error1_array = np.array(error1_list)
-        # error2_array = np.array(error2_list)
+        error2_array = np.array(error2_list)
         error3_array = np.array(error3_list)
 
         plt.plot(train_sizes, error1_array, marker='x', linestyle='-', label='GP')
-        # plt.plot(train_sizes, error2_array, marker='x', linestyle='-', label='MLP')
+        plt.plot(train_sizes, error2_array, marker='x', linestyle='-', label='MLP')
         plt.plot(train_sizes, error3_array, marker='x', linestyle='-', label='ScaSML')
         
         # Fit lines to compute slopes
         log_GN_steps = np.log10(train_sizes + epsilon)
         log_error1 = np.log10(error1_array+ epsilon)
-        # log_error2 = np.log10(error2_array+ epsilon)
+        log_error2 = np.log10(error2_array+ epsilon)
         log_error3 = np.log10(error3_array+ epsilon) 
         slope1, intercept1 = np.polyfit(log_GN_steps, log_error1, 1)
-        # slope2, intercept2 = np.polyfit(log_GN_steps, log_error2, 1)
+        slope2, intercept2 = np.polyfit(log_GN_steps, log_error2, 1)
         slope3, intercept3 = np.polyfit(log_GN_steps, log_error3, 1)
         fitted_line1 = 10 ** (intercept1 + slope1 * log_GN_steps)
-        # fitted_line2 = 10 ** (intercept2 + slope2 * log_GN_steps)
+        fitted_line2 = 10 ** (intercept2 + slope2 * log_GN_steps)
         fitted_line3 = 10 ** (intercept3 + slope3 * log_GN_steps)
         
         plt.plot(train_sizes, fitted_line1, linestyle='--', label=f'GP: slope={slope1:.2f}')
-        # plt.plot(train_sizes, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
+        plt.plot(train_sizes, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
         plt.plot(train_sizes, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
 
         plt.yscale('log')
