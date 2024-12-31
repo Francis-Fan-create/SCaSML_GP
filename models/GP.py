@@ -214,30 +214,16 @@ class GP(object):
         row5 = jnp.hstack([K51, K52, K53, K54, K55])  # Shape: (N_domain, phi_dim)
 
         # Vertically stack the rows to form the full matrix
-        kernel_phi_phi = jnp.vstack([row1, row2, row3, row4, row5])
-
-        # Compute traces except the second feature in each cycle
-        trace_domain = jnp.trace(K11)
-        trace_laplacian = jnp.trace(K33)
-        trace_dt = jnp.trace(K44)
-        trace_div = jnp.trace(K55)
-
-        # Scale them with the laplacian trace
-        eigen_nugget = self.nugget * jnp.concatenate([
-            trace_domain * jnp.ones(N_domain),
-            jnp.ones(N_boundary),
-            jnp.ones(N_domain),
-            trace_dt * jnp.ones(N_domain),
-            trace_div * jnp.ones(N_domain)
-        ])
-        eigen_nugget = eigen_nugget / trace_laplacian
-        kernel_phi_phi_perturb = kernel_phi_phi + jnp.diag(eigen_nugget)
+        kernel_phi_phi = jnp.vstack([row1, row2, row3, row4, row5]).astype(jnp.float64)  # Shape: (phi_dim, phi_dim)
+        # SVD decomposition, acclearated by jit
+        U, S, Vt = jit(jnp.linalg.svd)(kernel_phi_phi)
+        S_perturb = S + self.nugget
         # Compute the Cholesky decomposition
-        cholesky_phi_phi_perturb = jnp.linalg.cholesky(kernel_phi_phi_perturb+jnp.eye(phi_dim)*self.nugget)
+        cholesky_phi_phi_perturb = U @ jnp.diag(jnp.sqrt(S_perturb))
         if jnp.any(jnp.isnan(cholesky_phi_phi_perturb)):
             raise ValueError("Cholesky decomposition resulted in NaN values.")
-        self.cholesky_phi_phi_perturb = cholesky_phi_phi_perturb    
-
+        self.cholesky_phi_phi_perturb = cholesky_phi_phi_perturb.astype(jnp.float16)    
+        kernel_phi_phi_perturb = cholesky_phi_phi_perturb @ cholesky_phi_phi_perturb.T
         return kernel_phi_phi_perturb
     
     

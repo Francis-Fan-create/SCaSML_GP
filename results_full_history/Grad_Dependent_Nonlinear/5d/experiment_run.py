@@ -32,7 +32,7 @@ jax.random.key = jax.random.PRNGKey(1234)
 # fix random seed for torch
 torch.manual_seed(1234)
 #set default data type
-torch.set_default_dtype(torch.float64)
+torch.set_default_dtype(torch.float16)
 # device configuration for torch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
