@@ -100,12 +100,6 @@ $$
 
 Specifically, we consider the problem for
 $$
-d=5, \mu=-\frac1d,\sigma=\sqrt{2}, D=[-0.5,0.5]^{100}, s=0, T=0.5
-$$
-
-and
-
-$$
-d=10,\mu=-\frac1d, \sigma=\sqrt{2}, D=[-0.5,0.5]^{250}, s=0, T=0.5
+d=20, 40, 60, 80, \mu=-\frac1d,\sigma=\sqrt{2}, D=[-0.5,0.5]^{100}, s=0, T=0.5
 $$
 

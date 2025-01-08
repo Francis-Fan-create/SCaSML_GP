@@ -106,7 +106,7 @@ class ConvergenceRate(object):
     
     
         for j in range(list_len):
-            print(f"Training solver1 with {n_samples_domain} domain points and {n_samples_boundary} boundary points...")
+            print(f"Training solver1 with {train_sizes_domain[j]} domain points and {train_sizes_boundary[j]} boundary points...")
             data_domain_train, data_boundary_train = eq.generate_data(train_sizes_domain[j], train_sizes_boundary[j])
             # Train solver1 with fixed training sample size and varying GN_steps
             self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
