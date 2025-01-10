@@ -87,7 +87,9 @@ class SimpleUniform(object):
         data_domain_test, data_boundary_test = eq.generate_test_data(num_domain, num_boundary, random = "LHS")
         data_test = np.concatenate((data_domain_test, data_boundary_test), axis=0)
         xt_test = data_test[:, :self.dim + 1]
-        exact_sol = eq.exact_solution(xt_test)
+        exact_sol_u = eq.exact_solution(xt_test)
+        exact_sol_z = eq.exact_solution_derivative(xt_test)*eq.sigma()
+        exact_sol = np.concatenate((exact_sol_u, exact_sol_z), axis=1)
     
         errors1 = np.zeros(num_domain)
         errors2 = np.zeros(num_domain)
@@ -101,28 +103,30 @@ class SimpleUniform(object):
         # Measure the time and predict using solver1
         print("Predicting with solver1 on test data...")
         start = time.time()
-        sol1 = self.solver1.predict(xt_test)
+        sol1_u = self.solver1.predict(xt_test)
+        sol1_z = self.solver1.compute_gradient(xt_test, sol1_u)*eq.sigma()
+        sol1 = np.concatenate((sol1_u, sol1_z), axis=1)
         time1 += time.time() - start
     
         # Measure the time and predict using solver2
         print("Predicting with solver2 on test data...")
         start = time.time()
-        sol2 = self.solver2.u_solve(n, rhomax, data_test)
+        sol2 = self.solver2.uz_solve(n, rhomax, data_test)
         time2 += time.time() - start
     
         # Measure the time and predict using solver3
         print("Predicting with solver3 on test data...")
         start = time.time()
-        sol3 = self.solver3.u_solve(n, rhomax, data_test)
+        sol3 = self.solver3.uz_solve(n, rhomax, data_test)
         time3 += time.time() - start
 
          # Compute the average error and relative error
-        errors1 = (sol1 - exact_sol) ** 2
-        errors2 = (sol2 - exact_sol) ** 2
-        errors3 = (sol3 - exact_sol) ** 2
-        rel_error1 = np.mean(errors1) / (np.mean(exact_sol ** 2) + 1e-6)
-        rel_error2 = np.mean(errors2) / (np.mean(exact_sol ** 2) + 1e-6)
-        rel_error3 = np.mean(errors3) / (np.mean(exact_sol ** 2) + 1e-6)
+        errors1 = np.linalg.norm(sol1 - exact_sol, axis=1) ** 2
+        errors2 = np.linalg.norm(sol2 - exact_sol, axis=1) ** 2
+        errors3 = np.linalg.norm(sol3 - exact_sol, axis=1) ** 2
+        rel_error1 = np.mean(errors1) / (np.mean(np.linalg.norm(exact_sol) ** 2) + 1e-6)
+        rel_error2 = np.mean(errors2) / (np.mean(np.linalg.norm(exact_sol)**2) + 1e-6)
+        rel_error3 = np.mean(errors3) / (np.mean(np.linalg.norm(exact_sol)**2) + 1e-6)
         real_sol_abs = np.mean(exact_sol + 1e-6)  # Compute the absolute value of the real solution
         #stop the profiler
         profiler.disable()

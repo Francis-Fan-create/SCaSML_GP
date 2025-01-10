@@ -320,6 +320,25 @@ class Grad_Dependent_Nonlinear(Equation):
         result = result[:, jnp.newaxis]  # Convert to 2D
         return result
     
+    @partial(jit,static_argnames=["self"])
+    def exact_solution_derivative(self, x_t):
+        '''
+        Computes the exact solution derivative of the PDE for given inputs.
+        
+        Parameters:
+        - x_t (ndarray): Input tensor of shape (batch_size, n_input), where n_input includes the time dimension.
+        
+        Returns:
+        - result (ndarray): An array of shape (batch_size, n_input-1), representing the exact solution derivative.
+        '''
+        t = x_t[:, -1]
+        x = x_t[:, :-1]
+        sum_x = jnp.sum(x, axis=1)
+        exp_term = jnp.exp(t + sum_x)  # Computes the exponential term of the solution.
+        result = exp_term / (1 + exp_term)**2  # Computes the exact solution derivative.
+        result = result[:, jnp.newaxis]  # Convert to 2D
+        return result
+    
     def geometry(self, t0=0, T=0.5):
         '''
         Defines the geometry of the domain for the PDE.
@@ -483,6 +502,20 @@ class Linear_HJB(Equation):
         sum_x = jnp.sum(x, axis=1)
         result = sum_x + (self.T - t)
         result = result[:, jnp.newaxis]  # Convert to 2D
+        return result
+    
+    @partial(jit,static_argnames=["self"])
+    def exact_solution_derivative(self, x_t):
+        '''
+        Computes the exact solution derivative of the PDE for given inputs.
+        
+        Parameters:
+        - x_t (ndarray): Input tensor of shape (batch_size, n_input), where n_input includes the time dimension.
+        
+        Returns:
+        - result (ndarray): An array of shape (batch_size, n_input-1), representing the exact solution derivative.
+        '''
+        result = jnp.ones((x_t.shape[0], self.n_input - 1))
         return result
     
     def geometry(self, t0=0, T=0.5):
