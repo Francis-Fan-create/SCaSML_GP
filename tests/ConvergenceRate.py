@@ -102,9 +102,7 @@ class ConvergenceRate(object):
         n_samples_boundary = int(n_samples/5)
         xt_values_domain, xt_values_boundary = eq.generate_test_data(n_samples_domain, n_samples_boundary , random='LHS')
         xt_values = np.concatenate((xt_values_domain, xt_values_boundary), axis=0)
-        exact_sol_u = eq.exact_solution(xt_values)
-        exact_sol_z = eq.exact_solution_derivative(xt_values) * eq.sigma()
-        exact_sol = np.concatenate((exact_sol_u, exact_sol_z), axis=1)
+        exact_sol = eq.exact_solution(xt_values)
     
     
         for j in range(list_len):
@@ -114,27 +112,24 @@ class ConvergenceRate(object):
             self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
         
             # Predict with solver1
-            sol1_u = self.solver1.predict(xt_values)
-            sol1_z = self.solver1.compute_gradient(xt_values)* eq.sigma()
-            sol1 = np.concatenate((sol1_u, sol1_z), axis=1)
+            sol1 = self.solver1.predict(xt_values)
         
             # Solve with solver2 (baseline solver)
-            sol2 = self.solver2.uz_solve(rho_, rho_, xt_values)
+            sol2 = self.solver2.u_solve(rho_, rho_, xt_values)
         
             # Solve with solver3 using the trained solver1
-            sol3 = self.solver3.uz_solve(rho_, rho_, xt_values)
+            sol3 = self.solver3.u_solve(rho_, rho_, xt_values)
         
             # Compute errors
-            errors1 = np.linalg.norm(sol1 - exact_sol, axis=1) ** 2
-            errors2 = np.linalg.norm(sol2 - exact_sol, axis=1) ** 2
-            errors3 = np.linalg.norm(sol3 - exact_sol, axis=1) ** 2
+            errors1 = (sol1 - exact_sol) ** 2
+            errors2 = (sol2 - exact_sol) ** 2
+            errors3 = (sol3 - exact_sol) ** 2
         
             # Compute error ratios
             mean_error1 = np.mean(errors1)
             mean_error2 = np.mean(errors2)
-            mean_error3 = np.mean(errors3)
-        
-            mean_exact_sol = np.mean(np.linalg.norm(exact_sol, axis=1) ** 2 + 1e-6)
+            mean_error3 = np.mean(errors3)      
+            mean_exact_sol = np.mean((exact_sol) ** 2 + 1e-6)
             error_value1 = mean_error1 / mean_exact_sol
             error_value2 = mean_error2 / mean_exact_sol
             error_value3 = mean_error3 / mean_exact_sol
