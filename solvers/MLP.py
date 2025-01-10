@@ -154,7 +154,7 @@ class MLP:
         
         Parameters:
             n (int): The index of summands in quadratic sum.
-            rho (int): Current level.
+            rho (int): Number of levels of refinement.
             x_t (array): A batch of spatial-temporal coordinates, shape (batch_size, n_input).
         
         Returns:
@@ -207,10 +207,11 @@ class MLP:
         u = jnp.mean(differences + terminals, axis=1)  # Mean over Monte Carlo samples, shape (batch_size, 1)
         delta_t = (T - t + 1e-6)[:, jnp.newaxis]  # Avoid division by zero
         z = jnp.sum(differences * W, axis=1) / (MC * delta_t)  # Compute z values, shape (batch_size, dim)
+        cated_uz = jnp.concatenate((u, z), axis=-1)  # Concatenate u and z values
 
-        # Recursive call for n > 0
+        # Recursive call
         if n <= 0:
-            return jnp.concatenate((u, z), axis=-1)  # Concatenate u and z values
+            return jnp.zeros_like(cated_uz)  # Return zeros if n < 0
 
         # Recursive computation for n > 0
         for l in range(n):

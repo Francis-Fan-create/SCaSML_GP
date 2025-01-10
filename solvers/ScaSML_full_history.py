@@ -109,7 +109,7 @@ class ScaSML_full_history(object):
         
         Parameters:
             n (int): The index of summands in quadratic sum.
-            rho (int): Current level.
+            rho (int): Number of levels of refinement.
             x_t (ndarray): A batch of spatial-temporal coordinates, shape (batch_size, n_input), where
                            batch_size is the number of samples in the batch and n_input is the number of input features (spatial dimensions + 1 for time).
         
@@ -166,18 +166,20 @@ class ScaSML_full_history(object):
         
         # Compute u and z values
         u = jnp.mean(differences + terminals, axis=1)  # Mean over Monte Carlo samples, shape (batch_size, 1)
-
         delta_t = (T - t + 1e-6)[:, jnp.newaxis]  # Avoid division by zero, shape (batch_size, 1)
         z = jnp.mean(differences * std_normal, axis=1) / (delta_t)  # Compute z values, shape (batch_size, dim)           
+        cated_uz = jnp.concatenate((u, z), axis=-1)  # Concatenate u and z values, shape (batch_size, dim + 1)
+
         # Recursive call for n > 0
         if n == 0:
             batch_size=x_t.shape[0]
             u_hat = self.GP.predict(x_t)
             grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:, :-1]   
             initial_value= jnp.concatenate((u_hat, sigma* grad_u_hat_x), axis=-1)        
-            return jnp.concatenate((u, z), axis=-1) + initial_value 
+            return initial_value 
         elif n < 0:
-            return jnp.concatenate((u, z), axis=-1)
+            return jnp.zeros_like(cated_uz)  # Return zeros if n < 0
+        
         # Recursive computation for n > 0
         for l in range(n):
             MC = int(Mf[rho - 1, n - l - 1])  # Number of Monte Carlo samples, scalar

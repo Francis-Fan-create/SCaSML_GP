@@ -208,15 +208,16 @@ class ScaSML:
         u = jnp.mean(differences + terminals, axis=1)
         delta_t = (T - t + 1e-6)[:, jnp.newaxis]
         z = jnp.sum(differences * W, axis=1) / (MC * delta_t)
+        cated_uz = jnp.concatenate((u, z), axis=-1)
 
         if n == 0:
             batch_size=x_t.shape[0]
             u_hat = self.GP.predict(x_t)
             grad_u_hat_x = self.GP.compute_gradient(x_t, u_hat)[:,:-1]   
             initial_value= jnp.concatenate((u_hat, sigma* grad_u_hat_x), axis=-1)        
-            return jnp.concatenate((u, z), axis=-1)+initial_value 
+            return initial_value 
         elif n < 0:
-            return jnp.concatenate((u, z), axis=-1)
+            return jnp.zeros_like(cated_uz)  # Return zeros if n < 0
 
         for l in range(n):
             q = int(Q[rho - 1, n - l - 1])
