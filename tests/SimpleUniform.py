@@ -116,7 +116,7 @@ class SimpleUniform(object):
         sol3 = self.solver3.u_solve(n, rhomax, data_test)
         time3 += time.time() - start
 
-         # Compute the average error and relative error
+        # Compute the average error and relative error
         errors1 = (sol1 - exact_sol) ** 2
         errors2 = (sol2 - exact_sol) ** 2
         errors3 = (sol3 - exact_sol) ** 2
@@ -124,6 +124,7 @@ class SimpleUniform(object):
         rel_error2 = np.mean(errors2) / (np.mean((exact_sol)**2) + 1e-6)
         rel_error3 = np.mean(errors3) / (np.mean((exact_sol)**2) + 1e-6)
         real_sol_abs = np.mean(exact_sol + 1e-6)  # Compute the absolute value of the real solution
+        PDE_loss = self.solver1.compute_PDE_loss(data_test)
         #stop the profiler
         profiler.disable()
         #save the profiler results
@@ -187,6 +188,23 @@ class SimpleUniform(object):
         wandb.log({"Error Distribution": wandb.Image(f"{save_path}/L2_Error_Distribution_errorbar.png")})
         
         
+
+        plt.figure()
+        # collect all PDE losses
+        PDE_losses = [PDE_loss.flatten()]
+        # Create a boxplot
+        plt.boxplot(PDE_losses, labels=['PDE Loss'])
+        plt.xticks(rotation=45)
+        plt.yscale('log')
+        # Add a title and labels
+        plt.title('PDE Loss Distribution')
+        plt.ylabel('PDE Loss Value')
+        plt.tight_layout()
+        # Show the plot
+        plt.savefig(f"{save_path}/PDE_Loss_Distribution.png")
+        # Upload the plot to wandb
+        wandb.log({"PDE Loss Distribution": wandb.Image(f"{save_path}/PDE_Loss_Distribution.png")})
+
         # Print the results
         print(f"GP rel L2, rho={rhomax}->", rel_error1)
         
@@ -199,6 +217,8 @@ class SimpleUniform(object):
         
         print("Real Solution->", real_sol_abs)
         
+        print(f"PDE Loss->", "min:", np.min(PDE_loss), "max:", np.max(PDE_loss), "mean:", np.mean(PDE_loss))
+
         print(f"GP L2, rho={rhomax}->","min:", np.min(errors1), "max:", np.max(errors1), "mean:", np.mean(errors1))
         
         
