@@ -272,7 +272,7 @@ class ScaSML:
                     delta_t = (cloc[:, k, q - 1] - t + 1e-6)[:, jnp.newaxis]
                     z -= wloc[:, k, q - 1][:, jnp.newaxis] * jnp.sum(y * W, axis=1) / (MC * delta_t)
         output_uz = jnp.concatenate((u, z), axis=-1)
-        uncertainty = jnp.sqrt(jnp.abs(self.GP.compute_PDE_loss(x_t)))
+        uncertainty = 1e-2
         # Clip output_uz to avoid large values
         return jnp.clip(output_uz, -uncertainty, uncertainty)
 
