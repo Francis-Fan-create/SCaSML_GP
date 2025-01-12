@@ -44,7 +44,7 @@ class SimpleUniform(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=3, num_domain=500, num_boundary=100):
+    def test(self, save_path, rhomax=2, num_domain=500, num_boundary=100):
         '''
         Compares solvers on test data after training on a large training dataset.
     
@@ -186,24 +186,6 @@ class SimpleUniform(object):
         plt.savefig(f"{save_path}/L2_Error_Distribution_errorbar.png")
         # Upload the plot to wandb
         wandb.log({"Error Distribution": wandb.Image(f"{save_path}/L2_Error_Distribution_errorbar.png")})
-        
-        
-
-        plt.figure()
-        # collect all PDE losses
-        PDE_losses = [PDE_loss.flatten()]
-        # Create a boxplot
-        plt.boxplot(PDE_losses, labels=['PDE Loss'])
-        plt.xticks(rotation=45)
-        plt.yscale('log')
-        # Add a title and labels
-        plt.title('PDE Loss Distribution')
-        plt.ylabel('PDE Loss Value')
-        plt.tight_layout()
-        # Show the plot
-        plt.savefig(f"{save_path}/PDE_Loss_Distribution.png")
-        # Upload the plot to wandb
-        wandb.log({"PDE Loss Distribution": wandb.Image(f"{save_path}/PDE_Loss_Distribution.png")})
 
         # Print the results
         print(f"GP rel L2, rho={rhomax}->", rel_error1)
