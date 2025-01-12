@@ -225,8 +225,11 @@ class ScaSML_full_history(object):
                 # Update u and z values
                 u -= 2*(T-t)[:,jnp.newaxis]* jnp.mean(jnp.sqrt(tau)[:,:,jnp.newaxis]*y, axis=1)  # Update u values
                 delta_t = (sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)
-                z -= 2*(T-t)[:,jnp.newaxis] * jnp.mean((jnp.sqrt(tau)[:,:,jnp.newaxis]*y * std_normal / (delta_t)),axis=1)  # Update z values  
-        return jnp.concatenate((u, z), axis=-1)  # Concatenate adjusted u and z values, shape (batch_size, dim + 1)
+                z -= 2*(T-t)[:,jnp.newaxis] * jnp.mean((jnp.sqrt(tau)[:,:,jnp.newaxis]*y * std_normal / (delta_t)),axis=1)  # Update z values 
+        output_uz = jnp.concatenate((u, z), axis=-1)  # Concatenate u and z values, shape (batch_size, dim + 1)
+        uncertainty = jnp.sqrt(jnp.abs(self.GP.compute_PDE_loss(x_t))) 
+        # Clip output_uz to avoid large values
+        return jnp.clip(output_uz, -uncertainty, uncertainty)
 
     def u_solve(self, n, rho, x_t):
         '''
@@ -245,10 +248,6 @@ class ScaSML_full_history(object):
         u_breve_z_breve = self.uz_solve(n, rho, x_t)
         u_breve, z_breve = u_breve_z_breve[:, 0], u_breve_z_breve[:, 1:]
         
-        batch_size=x_t.shape[0]
         u_hat = self.GP.predict(x_t)
         
-        # Calculate and return the final u value, if |u_breve|<sqrt(compute_PDE_loss(x_t)), return u_breve+u_hat, else return u_hat
-        uncertainty = jnp.sqrt(jnp.abs(self.GP.compute_PDE_loss(x_t)))
-        u = jnp.where(jnp.abs(u_breve) < uncertainty, u_breve + u_hat, u_hat)
-        return u
+        return u_hat + u_breve

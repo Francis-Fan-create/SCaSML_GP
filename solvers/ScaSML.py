@@ -271,7 +271,10 @@ class ScaSML:
                     u -= wloc[:, k, q - 1][:, jnp.newaxis] * jnp.mean(y, axis=1)
                     delta_t = (cloc[:, k, q - 1] - t + 1e-6)[:, jnp.newaxis]
                     z -= wloc[:, k, q - 1][:, jnp.newaxis] * jnp.sum(y * W, axis=1) / (MC * delta_t)
-        return jnp.concatenate((u, z), axis=-1)
+        output_uz = jnp.concatenate((u, z), axis=-1)
+        uncertainty = jnp.sqrt(jnp.abs(self.GP.compute_PDE_loss(x_t)))
+        # Clip output_uz to avoid large values
+        return jnp.clip(output_uz, -uncertainty, uncertainty)
 
     def u_solve(self, n, rho, x_t):
         '''
@@ -285,10 +288,11 @@ class ScaSML:
         Returns:
             array: u values.
         '''
+        eq = self.equation
+        # Calculate u_breve and z_breve using uz_solve
         u_breve_z_breve = self.uz_solve(n, rho, x_t)
-        u_breve = u_breve_z_breve[:, 0]
+        u_breve, z_breve = u_breve_z_breve[:, 0], u_breve_z_breve[:, 1:]
+        
         u_hat = self.GP.predict(x_t)
-        # Calculate and return the final u value, if |u_breve|<sqrt(compute_PDE_loss(x_t)), return u_breve+u_hat, else return u_hat
-        uncertainty = jnp.sqrt(jnp.abs(self.GP.compute_PDE_loss(x_t)))
-        u = jnp.where(jnp.abs(u_breve) < uncertainty, u_breve + u_hat, u_hat)
-        return u
+        
+        return u_hat + u_breve
