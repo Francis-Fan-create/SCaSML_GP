@@ -106,7 +106,7 @@ class MLP_full_history(object):
             ndarray: The concatenated u and z values for each sample in the batch, shape (batch_size, 1+n_input-1).
                      Here, u is the approximate solution of the PDE at the given coordinates, and z is the associated spatial gradient.
         '''
-        # Set alpha=1/2, beta=1/6
+        # Set alpha=1
         # Extract model parameters and functions
         Mf, Mg = self.Mf, self.Mg
         T = self.T  # Terminal time
@@ -166,7 +166,7 @@ class MLP_full_history(object):
         # Recursive computation for n > 0
         for l in range(n):
             MC = int(Mf[rho - 1, n - l - 1])  # Number of Monte Carlo samples, scalar
-            tau = random.uniform(subkey, shape=(batch_size, MC)) ** 2  # Sample a random variable tau in (0,1) with density rho(s) = 1/(2*sqrt(s))
+            tau = random.uniform(subkey, shape=(batch_size, MC))  # Sample a random variable tau in (0,1) with uniform distribution, shape (batch_size, MC)
             # Multiply tau by (T-t)
             sampled_time_steps = (tau * (T-t)[:, jnp.newaxis]).reshape((batch_size, MC, 1))  # Sample time steps, shape (batch_size, MC)
             X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC, dim)
@@ -189,9 +189,9 @@ class MLP_full_history(object):
             y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat)  # Apply generator term function, shape (batch_size * MC, 1)
             y = y_flat.reshape(batch_size, MC, 1)  # Reshape to shape (batch_size, MC, 1)
             # Update u and z values
-            u += 2*(T-t)[:,jnp.newaxis]* jnp.mean(jnp.sqrt(tau)[:,:,jnp.newaxis]*y, axis=1)  # Update u values
-            delta_t = (sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)
-            z += 2*(T-t)[:,jnp.newaxis] * jnp.mean((jnp.sqrt(tau)[:,:,jnp.newaxis]*y * std_normal / (delta_t)),axis=1)  # Update z values                
+            u += (T-t)[:,jnp.newaxis]* jnp.mean(y, axis=1)  # Update u values
+            delta_sqrt_t = jnp.sqrt(sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)
+            z += (T-t)[:,jnp.newaxis] * jnp.mean((y * std_normal / (delta_sqrt_t)),axis=1)  # Update z values                
             # Adjust u and z values if l > 0
             if l:
                 # Compute Compute u and z values for current quadrature point using vmap
@@ -206,11 +206,12 @@ class MLP_full_history(object):
                 y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat) # Apply generator term function, shape (batch_size * MC, 1)
                 y = y_flat.reshape(batch_size, MC, 1)  # Reshape to shape (batch_size, MC, 1)
                 # Update u and z values
-                u -= 2*(T-t)[:,jnp.newaxis]* jnp.mean(jnp.sqrt(tau)[:,:,jnp.newaxis]*y, axis=1)  # Update u values
-                delta_t = (sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)
-                z -= 2*(T-t)[:,jnp.newaxis] * jnp.mean((jnp.sqrt(tau)[:,:,jnp.newaxis]*y * std_normal / (delta_t)),axis=1)  # Update z values  
-        return jnp.concatenate((u, z), axis=-1)  # Concatenate adjusted u and z values, shape (batch_size, dim + 1)
-
+                u -= (T-t)[:,jnp.newaxis]* jnp.mean(y, axis=1)  # Update u values
+                delta_sqrt_t = jnp.sqrt(sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)
+                z += (T-t)[:,jnp.newaxis] * jnp.mean((y * std_normal / (delta_sqrt_t)),axis=1)  # Update z values  
+        output_cated = jnp.concatenate((u, z), axis=-1)  # Concatenate adjusted u and z values, shape (batch_size, dim + 1)
+        return jnp.clip(output_cated, -1, 1)  # Clip the output to avoid numerical instability
+    
     def u_solve(self, n, rho, x_t):
         '''
         Approximate the solution of the PDE, return the value of u(x_t), batchwisely.
