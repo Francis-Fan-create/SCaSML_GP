@@ -88,7 +88,7 @@ class ScaSML_full_history(object):
         '''
         # Set alpha=1
         # Extract model parameters and functions
-        M = 5 # Exponential base for sample size
+        M = 2 # Exponential base for sample size
         T = self.T  # Terminal time
         dim = self.n_input - 1  # Spatial dimensions
         batch_size = x_t.shape[0]  # Batch size
