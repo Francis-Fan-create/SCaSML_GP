@@ -146,28 +146,19 @@ class ScaSML:
             w =   w.at[:, k - 1].set(jnp.concatenate([wtemp[::-1], jnp.zeros(qmax - k)]))
         return Mf, Mg, Q, c, w
 
-    def set_approx_parameters(self, rhomax):
-        '''
-        Sets the approximation parameters for the multilevel Picard iteration.
-        This method should be called before solving the PDE.
-        
-        Args:
-            rhomax (int): Maximum level of refinement.
-        '''
-        self.Mf, self.Mg, self.Q, self.c, self.w = self.approx_parameters(rhomax)  # Set approximation parameters
-
     def uz_solve(self, n, rho, x_t):
         '''
         Approximate the solution of the PDE, return u(x_t) and z(x_t).
 
         Parameters:
-            n (int): Index of summands in quadratic sum.
-            rho (int): Current level.
+            n (int): Current level.
+            rho (int): Number of quadrature points.
             x_t (array): Spatial-temporal coordinates, shape (batch_size, n_input).
 
         Returns:
             array: Concatenated u and z values.
         '''
+        self.Mf, self.Mg, self.Q, self.c, self.w = self.approx_parameters(rho)  # Set approximation parameters
         Mf, Mg, Q, c, w = self.Mf, self.Mg, self.Q, self.c, self.w
         eq = self.equation
         T = self.T
@@ -272,7 +263,7 @@ class ScaSML:
                     delta_t = (cloc[:, k, q - 1] - t + 1e-6)[:, jnp.newaxis]
                     z -= wloc[:, k, q - 1][:, jnp.newaxis] * jnp.sum(y * W, axis=1) / (MC * delta_t)
         output_uz = jnp.concatenate((u, z), axis=-1)
-        uncertainty = 1e-2
+        uncertainty = self.equation.uncertainty
         # Clip output_uz to avoid large values
         return jnp.clip(output_uz, -uncertainty, uncertainty)
 

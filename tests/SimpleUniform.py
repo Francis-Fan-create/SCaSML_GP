@@ -50,7 +50,7 @@ class SimpleUniform(object):
     
         Parameters:
         save_path (str): The path to save the results.
-        rhomax (int): The maximum value of rho for approximation parameters.
+        rhomax (int): The number of quadrature points for the approximation, equal to the total level
         num_domain (int): The number of points in the test domain.
         num_boundary (int): The number of points on the test boundary.
         '''
@@ -69,8 +69,6 @@ class SimpleUniform(object):
         eq = self.equation
         eq_name = eq.__class__.__name__
         n = rhomax
-        self.solver2.set_approx_parameters(rhomax)
-        self.solver3.set_approx_parameters(rhomax)
     
         # Generate large training data
         num_train_domain = 1000  # Large number for training domain data

@@ -82,10 +82,6 @@ class ConvergenceRate(object):
         eq_dim = eq.n_input - 1
         geom = eq.geometry()
     
-        # Fix rho to rhomax
-        rho_ = rhomax
-        self.solver2.set_approx_parameters(rho_)
-        self.solver3.set_approx_parameters(rho_)
     
         # Fix GN_steps
         GN_steps = 1000 
@@ -115,10 +111,10 @@ class ConvergenceRate(object):
             sol1 = self.solver1.predict(xt_values)
         
             # Solve with solver2 (baseline solver)
-            sol2 = self.solver2.u_solve(rho_, rho_, xt_values)
+            sol2 = self.solver2.u_solve(rhomax, rhomax, xt_values)
         
             # Solve with solver3 using the trained solver1
-            sol3 = self.solver3.u_solve(rho_, rho_, xt_values)
+            sol3 = self.solver3.u_solve(rhomax, rhomax, xt_values)
         
             # Compute errors
             errors1 = (sol1 - exact_sol) ** 2

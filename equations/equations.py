@@ -242,6 +242,7 @@ class Grad_Dependent_Nonlinear(Equation):
         - n_output (int): The dimension of the output space. Defaults to 1.
         '''
         super().__init__(n_input, n_output)
+        self.uncertainty = 3e-3
     
     @partial(jit,static_argnames=["self"])
     def terminal_constraint(self, x_t):
@@ -373,7 +374,7 @@ class Grad_Dependent_Nonlinear(Equation):
         '''
         self.t0 = t0
         self.T = T
-        self.test_T = T/5
+        self.test_T = T
         self.test_radius = 0.5
         spacedomain = dde.geometry.Hypercube([-self.test_radius] * (self.n_input - 1), [self.test_radius] * (self.n_input - 1))  # Defines the spatial domain, for test.
         timedomain = dde.geometry.TimeDomain(t0, self.test_T)  # Defines the time domain for test.
@@ -428,6 +429,7 @@ class Linear_HJB(Equation):
         - n_output (int): The dimension of the output space. Defaults to 1.
         '''
         super().__init__(n_input, n_output)
+        self.uncertainty = 3e-2
     
     @partial(jit,static_argnames=["self"])
     def terminal_constraint(self, x_t):
@@ -552,7 +554,7 @@ class Linear_HJB(Equation):
         '''
         self.t0 = t0
         self.T = T
-        self.test_T = T/5
+        self.test_T = T
         self.test_radius = 0.5
         spacedomain = dde.geometry.Hypercube([-self.test_radius] * (self.n_input - 1), [self.test_radius] * (self.n_input - 1))  # Defines the spatial domain, for test.
         timedomain = dde.geometry.TimeDomain(t0, self.test_T)  # Defines the time domain for test.

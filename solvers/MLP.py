@@ -138,29 +138,20 @@ class MLP:
             w =   w.at[:, k - 1].set(jnp.concatenate([wtemp[::-1], jnp.zeros(qmax - k)]))
         return Mf, Mg, Q, c, w
 
-    def set_approx_parameters(self, rhomax):
-        '''
-        Sets the approximation parameters for the multilevel Picard iteration.
-        This method should be called before solving the PDE.
-        
-        Args:
-            rhomax (int): Maximum level of refinement.
-        '''
-        self.Mf, self.Mg, self.Q, self.c, self.w = self.approx_parameters(rhomax)  # Set approximation parameters
-
     def uz_solve(self, n, rho, x_t):
         '''
         Approximate the solution of the PDE, return the value of u(x_t) and z(x_t), batch-wise.
         
         Parameters:
-            n (int): The index of summands in quadratic sum.
-            rho (int): Number of levels of refinement.
+            n (int): Current level.
+            rho (int): Number of quadrature points.
             x_t (array): A batch of spatial-temporal coordinates, shape (batch_size, n_input).
         
         Returns:
             array: The concatenated u and z values for each sample in the batch, shape (batch_size, 1 + n_input - 1).
         '''
         # Extract model parameters and functions
+        self.Mf, self.Mg, self.Q, self.c, self.w = self.approx_parameters(rho)  # Set approximation parameters
         Mf, Mg, Q, c, w = self.Mf, self.Mg, self.Q, self.c, self.w
         T = self.T  # Terminal time
         dim = self.n_input - 1  # Spatial dimensions

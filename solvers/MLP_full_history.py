@@ -59,37 +59,6 @@ class MLP_full_history(object):
         self.evaluation_counter+=1
         eq = self.equation
         return eq.g(x_t)[:,0]
-
-    def approx_parameters(self, rhomax):
-        '''
-        Approximates parameters for the multilevel Picard iteration.
-        
-        Args:
-            rhomax (int): Maximum level of refinement.
-                
-        Returns:
-            tuple: A tuple containing matrices for forward Euler steps (Mf), backward Euler steps (Mg).
-                Shapes are as follows: Mf, Mg are (rhomax, rhomax).
-        '''
-        levels = list(range(1, rhomax + 1))  # Level list
-        Mf = jnp.zeros((rhomax, rhomax), dtype=int)  # Initialize matrix for forward Euler steps
-        Mg = jnp.zeros((rhomax, rhomax + 1), dtype=int)  # Initialize matrix for backward Euler steps
-        for rho in range(1, rhomax + 1):
-            for k in range(1, levels[rho - 1] + 1):
-                Mf = Mf.at[rho - 1, k - 1].set(int(round(rho ** (k / 2))))  # Compute forward Euler steps
-                Mg = Mg.at[rho - 1, k - 1].set(int(round(rho ** (k - 1))))  # Compute backward Euler steps
-            Mg = Mg.at[rho - 1, rho].set(int(rho ** rho))  # Special case for backward Euler steps
-        return Mf, Mg
-    
-    def set_approx_parameters(self, rhomax):
-        '''
-        Sets the approximation parameters for the multilevel Picard iteration.
-        This method should be called before solving the PDE.
-        
-        Args:
-            rhomax (int): Maximum level of refinement.
-        '''
-        self.Mf, self.Mg = self.approx_parameters(rhomax)  # Set approximation parameters
     
     # @log_variables
     def uz_solve(self, n, rho, x_t):
@@ -97,8 +66,8 @@ class MLP_full_history(object):
         Approximate the solution of the PDE, return the value of u(x_t) and z(x_t), batchwisely.
         
         Parameters:
-            n (int): The index of summands in quadratic sum.
-            rho (int): Number of levels of refinement.
+            n (int): Total levels for current solver.
+            rho (int): Number of quadrature points, not used in this solver.
             x_t (ndarray): A batch of spatial-temporal coordinates, shape (batch_size, n_input), where
                            batch_size is the number of samples in the batch and n_input is the number of input features (spatial dimensions + 1 for time).
         
@@ -108,7 +77,7 @@ class MLP_full_history(object):
         '''
         # Set alpha=1
         # Extract model parameters and functions
-        Mf, Mg = self.Mf, self.Mg
+        M = 5 # Exponential base for sample size
         T = self.T  # Terminal time
         dim = self.n_input - 1  # Spatial dimensions
         batch_size = x_t.shape[0]  # Batch size
@@ -124,34 +93,34 @@ class MLP_full_history(object):
         subkey = random.split(key, 1)[0]  # Subkey for generating Brownian increments
         
         # Determine the number of Monte Carlo samples for backward Euler
-        MC = int(Mg[rho - 1, n])  # Number of Monte Carlo samples, scalar
+        MC_g = int(M**n)  # Number of Monte Carlo samples for terminal condition, scalar
         
         # Generate Monte Carlo samples for backward Euler
-        std_normal = random.normal(subkey, shape=(batch_size, MC, dim))
-        dW = jnp.sqrt(T-t)[:, np.newaxis, np.newaxis] * std_normal  # Brownian increments, shape (batch_size, MC, dim)
-        self.evaluation_counter+=MC
-        X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC, dim)
-        disturbed_X = X + mu*(T-t)[:, np.newaxis, np.newaxis]+ sigma * dW  # Disturbed spatial coordinates, shape (batch_size, MC, dim)
+        std_normal = random.normal(subkey, shape=(batch_size, MC_g, dim))
+        dW = jnp.sqrt(T-t)[:, np.newaxis, np.newaxis] * std_normal  # Brownian increments, shape (batch_size, MC_g, dim)
+        self.evaluation_counter+=MC_g
+        X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC_g, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC_g, dim)
+        disturbed_X = X + mu*(T-t)[:, np.newaxis, np.newaxis]+ sigma * dW  # Disturbed spatial coordinates, shape (batch_size, MC_g, dim)
         
         # Initialize arrays for terminal and difference values
-        terminals = jnp.zeros((batch_size, MC, 1))  # Terminal values, shape (batch_size, MC, 1)
-        differences = jnp.zeros((batch_size, MC, 1))  # Differences, shape (batch_size, MC, 1)
+        terminals = jnp.zeros((batch_size, MC_g, 1))  # Terminal values, shape (batch_size, MC_g, 1)
+        differences = jnp.zeros((batch_size, MC_g, 1))  # Differences, shape (batch_size, MC_g, 1)
         
         # Prepare terminal inputs
-        input_terminal = jnp.concatenate((X, jnp.full((batch_size, MC, 1), T)), axis=2)  # Shape (batch_size, MC, n_input)
-        disturbed_input_terminal = jnp.concatenate((disturbed_X, jnp.full((batch_size, MC, 1), T)), axis=2)  # Shape (batch_size, MC, n_input)
+        input_terminal = jnp.concatenate((X, jnp.full((batch_size, MC_g, 1), T)), axis=2)  # Shape (batch_size, MC_g, n_input)
+        disturbed_input_terminal = jnp.concatenate((disturbed_X, jnp.full((batch_size, MC_g, 1), T)), axis=2)  # Shape (batch_size, MC_g, n_input)
 
         # Flatten inputs for vectorized function evaluation
         input_terminal_flat = input_terminal.reshape(-1, self.n_input)
         disturbed_input_terminal_flat = disturbed_input_terminal.reshape(-1, self.n_input)
 
         # Vectorized evaluation of g
-        terminals_flat = g(input_terminal_flat)  # Evaluate terminal condition, shape (batch_size * MC, 1)
-        differences_flat = g(disturbed_input_terminal_flat) - terminals_flat  # Evaluate disturbed terminal condition, shape (batch_size * MC, 1)
+        terminals_flat = g(input_terminal_flat)  # Evaluate terminal condition, shape (batch_size * MC_g, 1)
+        differences_flat = g(disturbed_input_terminal_flat) - terminals_flat  # Evaluate disturbed terminal condition, shape (batch_size * MC_g, 1)
 
-        # Reshape back to (batch_size, MC, 1)
-        terminals = terminals_flat.reshape(batch_size, MC, 1)
-        differences = differences_flat.reshape(batch_size, MC, 1)
+        # Reshape back to (batch_size, MC_g, 1)
+        terminals = terminals_flat.reshape(batch_size, MC_g, 1)
+        differences = differences_flat.reshape(batch_size, MC_g, 1)
         
         # Compute u and z values
         u = jnp.mean(differences + terminals, axis=1)  # Mean over Monte Carlo samples, shape (batch_size, 1)
@@ -165,29 +134,29 @@ class MLP_full_history(object):
         
         # Recursive computation for n > 0
         for l in range(n):
-            MC = int(Mf[rho - 1, n - l - 1])  # Number of Monte Carlo samples, scalar
-            tau = random.uniform(subkey, shape=(batch_size, MC))  # Sample a random variable tau in (0,1) with uniform distribution, shape (batch_size, MC)
+            MC_f = int(M**(n-l))  # Number of Monte Carlo samples, scalar
+            tau = random.uniform(subkey, shape=(batch_size, MC_f))  # Sample a random variable tau in (0,1) with uniform distribution, shape (batch_size, MC_f)
             # Multiply tau by (T-t)
-            sampled_time_steps = (tau * (T-t)[:, jnp.newaxis]).reshape((batch_size, MC, 1))  # Sample time steps, shape (batch_size, MC)
-            X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC, dim)
-            simulated = jnp.zeros((batch_size, MC, dim + 1))  # Initialize array for simulated values, shape (batch_size, MC, dim + 1)
-            std_normal = random.normal(subkey, shape=(batch_size, MC, dim))  # Generate standard normal samples
-            dW =jnp.sqrt(sampled_time_steps) * std_normal  # Brownian increments for current time step, shape (batch_size, MC, dim)
-            self.evaluation_counter+=MC*dim
+            sampled_time_steps = (tau * (T-t)[:, jnp.newaxis]).reshape((batch_size, MC_f, 1))  # Sample time steps, shape (batch_size, MC_f)
+            X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC_f, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC_f, dim)
+            simulated = jnp.zeros((batch_size, MC_f, dim + 1))  # Initialize array for simulated values, shape (batch_size, MC_f, dim + 1)
+            std_normal = random.normal(subkey, shape=(batch_size, MC_f, dim))  # Generate standard normal samples
+            dW =jnp.sqrt(sampled_time_steps) * std_normal  # Brownian increments for current time step, shape (batch_size, MC_f, dim)
+            self.evaluation_counter+=MC_f*dim
             X += mu*(sampled_time_steps)+sigma * dW  # Update spatial coordinates
-            co_solver_l = lambda X_t: self.uz_solve(n=l, rho=rho, x_t=X_t)  # Co-solver for level l
-            co_solver_l_minus_1 = lambda X_t: self.uz_solve(n=l - 1, rho=rho, x_t=X_t)  # Co-solver for level l - 1
+            co_solver_l = lambda X_t: self.uz_solve(n=l, rho= None, x_t=X_t)  # Co-solver for level l
+            co_solver_l_minus_1 = lambda X_t: self.uz_solve(n=l - 1, rho= None, x_t=X_t)  # Co-solver for level l - 1
             # Compute Compute u and z values for current quadrature point using vmap
-            input_intermediates = jnp.concatenate((X, sampled_time_steps), axis=2)  # Intermediate spatial-temporal coordinates, shape (batch_size, MC, n_input)
+            input_intermediates = jnp.concatenate((X, sampled_time_steps), axis=2)  # Intermediate spatial-temporal coordinates, shape (batch_size, MC_f, n_input)
             input_intermediates_flat = input_intermediates.reshape(-1, self.n_input)
             simulated_flat = co_solver_l(input_intermediates_flat)
-            simulated = simulated_flat.reshape(batch_size, MC, dim + 1)
-            simulated_u, simulated_z = simulated[:, :, 0].reshape(batch_size, MC, 1), simulated[:, :, 1:]  # Extract u and z values, shapes (batch_size, MC, 1) and (batch_size, MC, dim)
+            simulated = simulated_flat.reshape(batch_size, MC_f, dim + 1)
+            simulated_u, simulated_z = simulated[:, :, 0].reshape(batch_size, MC_f, 1), simulated[:, :, 1:]  # Extract u and z values, shapes (batch_size, MC_f, 1) and (batch_size, MC_f, dim)
             # Flatten inputs for vectorized function evaluation and apply generator term function
             simulated_u_flat = simulated_u.reshape(-1, 1)
             simulated_z_flat = simulated_z.reshape(-1, dim)
-            y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat)  # Apply generator term function, shape (batch_size * MC, 1)
-            y = y_flat.reshape(batch_size, MC, 1)  # Reshape to shape (batch_size, MC, 1)
+            y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat)  # Apply generator term function, shape (batch_size * MC_f, 1)
+            y = y_flat.reshape(batch_size, MC_f, 1)  # Reshape to shape (batch_size, MC_f, 1)
             # Update u and z values
             u += (T-t)[:,jnp.newaxis]* jnp.mean(y, axis=1)  # Update u values
             delta_sqrt_t = jnp.sqrt(sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)
@@ -195,16 +164,16 @@ class MLP_full_history(object):
             # Adjust u and z values if l > 0
             if l:
                 # Compute Compute u and z values for current quadrature point using vmap
-                input_intermediates = jnp.concatenate((X, sampled_time_steps), axis=2)  # Intermediate spatial-temporal coordinates, shape (batch_size, MC, n_input)
+                input_intermediates = jnp.concatenate((X, sampled_time_steps), axis=2)  # Intermediate spatial-temporal coordinates, shape (batch_size, MC_f, n_input)
                 input_intermediates_flat = input_intermediates.reshape(-1, self.n_input)
                 simulated_flat = co_solver_l_minus_1(input_intermediates_flat)
-                simulated = simulated_flat.reshape(batch_size, MC, dim + 1)
-                simulated_u, simulated_z = simulated[:, :, 0].reshape(batch_size, MC, 1), simulated[:, :, 1:]  # Extract u and z values, shapes (batch_size, MC, 1) and (batch_size, MC, dim)
+                simulated = simulated_flat.reshape(batch_size, MC_f, dim + 1)
+                simulated_u, simulated_z = simulated[:, :, 0].reshape(batch_size, MC_f, 1), simulated[:, :, 1:]  # Extract u and z values, shapes (batch_size, MC_f, 1) and (batch_size, MC_f, dim)
                 # Flatten inputs for vectorized function evaluation and apply generator term function
                 simulated_u_flat = simulated_u.reshape(-1, 1)
                 simulated_z_flat = simulated_z.reshape(-1, dim)
-                y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat) # Apply generator term function, shape (batch_size * MC, 1)
-                y = y_flat.reshape(batch_size, MC, 1)  # Reshape to shape (batch_size, MC, 1)
+                y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat) # Apply generator term function, shape (batch_size * MC_f, 1)
+                y = y_flat.reshape(batch_size, MC_f, 1)  # Reshape to shape (batch_size, MC_f, 1)
                 # Update u and z values
                 u -= (T-t)[:,jnp.newaxis]* jnp.mean(y, axis=1)  # Update u values
                 delta_sqrt_t = jnp.sqrt(sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)

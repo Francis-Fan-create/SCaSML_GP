@@ -55,7 +55,7 @@ class NormalSphere(object):
     
         Parameters:
         save_path (str): The path to save the results.
-        rhomax (int): The maximum value of rho for approximation parameters.
+        rhomax (int): The number of quadrature points for the approximation, equal to the total level of the solver.
         n_samples (int): The number of samples for testing.
         x_grid_num (int): The number of grid points in the x dimension.
         t_grid_num (int): The number of grid points in the time dimension.
@@ -89,8 +89,6 @@ class NormalSphere(object):
         x_grid = np.linspace(0, self.radius, x_grid_num)
         t_grid = np.linspace(self.t0, self.test_T , t_grid_num) # Adjust the time grid for testing
         x_mesh, t_mesh = np.meshgrid(x_grid, t_grid)
-        self.solver2.set_approx_parameters(rhomax)
-        self.solver3.set_approx_parameters(rhomax)
         errors1 = np.zeros_like(x_mesh)
         errors2 = np.zeros_like(x_mesh)
         errors3 = np.zeros_like(x_mesh)
@@ -130,7 +128,7 @@ class NormalSphere(object):
                 time3 += time.time() - start
 
                 # Compute the average error and relative error
-                errors1[i, j] +=np.mean((sol1 - exact_sol) ** 2)
+                errors1[i, j] += np.mean((sol1 - exact_sol) ** 2)
                 errors2[i, j] += np.mean((sol2 - exact_sol) ** 2)
                 errors3[i, j] += np.mean((sol3 - exact_sol) ** 2)
                 rel_error1[i, j] +=np.mean( (sol1 - exact_sol) ** 2) / (np.mean(exact_sol ** 2) + 1e-6)
