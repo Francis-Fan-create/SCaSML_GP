@@ -93,7 +93,7 @@ class SimpleUniform(object):
         rel_error1 = 0
         rel_error2 = 0
         rel_error3 = 0
-        real_sol_abs = 0
+        real_sol_L2 = 0
         time1, time2, time3 = 0, 0, 0
     
         # Measure the time and predict using solver1
@@ -115,13 +115,13 @@ class SimpleUniform(object):
         time3 += time.time() - start
 
         # Compute the average error and relative error
-        errors1 = (sol1 - exact_sol) ** 2
-        errors2 = (sol2 - exact_sol) ** 2
-        errors3 = (sol3 - exact_sol) ** 2
-        rel_error1 = np.mean(errors1) / (np.mean((exact_sol) ** 2) + 1e-6)
-        rel_error2 = np.mean(errors2) / (np.mean((exact_sol)**2) + 1e-6)
-        rel_error3 = np.mean(errors3) / (np.mean((exact_sol)**2) + 1e-6)
-        real_sol_abs = np.mean(exact_sol + 1e-6)  # Compute the absolute value of the real solution
+        errors1 = np.abs(sol1 - exact_sol)
+        errors2 = np.abs(sol2 - exact_sol)
+        errors3 = np.abs(sol3 - exact_sol)
+        rel_error1 = np.linalg.norm(errors1) / np.linalg.norm(exact_sol)
+        rel_error2 = np.linalg.norm(errors2) / np.linalg.norm(exact_sol)
+        rel_error3 = np.linalg.norm(errors3) / np.linalg.norm(exact_sol)
+        real_sol_L2 = np.linalg.norm(exact_sol)
         PDE_loss = self.solver1.compute_PDE_loss(data_test)
         #stop the profiler
         profiler.disable()
@@ -195,7 +195,7 @@ class SimpleUniform(object):
         print(f"ScaSML rel L2, rho={rhomax}->", rel_error3)
         
         
-        print("Real Solution->", real_sol_abs)
+        print("Real Solution->", real_sol_L2)
         
         print(f"PDE Loss->", "min:", np.min(PDE_loss), "max:", np.max(PDE_loss), "mean:", np.mean(PDE_loss))
 

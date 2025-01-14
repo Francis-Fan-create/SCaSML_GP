@@ -128,13 +128,13 @@ class NormalSphere(object):
                 time3 += time.time() - start
 
                 # Compute the average error and relative error
-                errors1[i, j] += np.mean((sol1 - exact_sol) ** 2)
-                errors2[i, j] += np.mean((sol2 - exact_sol) ** 2)
-                errors3[i, j] += np.mean((sol3 - exact_sol) ** 2)
-                rel_error1[i, j] +=np.mean( (sol1 - exact_sol) ** 2) / (np.mean(exact_sol ** 2) + 1e-6)
-                rel_error2[i, j] += np.mean((sol2 - exact_sol) ** 2)/ (np.mean(exact_sol ** 2) + 1e-6)
-                rel_error3[i, j] += np.mean((sol3 - exact_sol) ** 2) / (np.mean(exact_sol ** 2) + 1e-6)
-                real_sol_abs[i, j] = np.mean(exact_sol ** 2 + 1e-6)
+                errors1[i, j] += np.linalg.norm(sol1 - exact_sol)
+                errors2[i, j] += np.linalg.norm(sol2 - exact_sol)
+                errors3[i, j] += np.linalg.norm(sol3 - exact_sol)
+                rel_error1[i, j] += np.linalg.norm(sol1 - exact_sol) / (np.linalg.norm(exact_sol) + 1e-6)
+                rel_error2[i, j] += np.linalg.norm(sol2 - exact_sol) / (np.linalg.norm(exact_sol) + 1e-6)
+                rel_error3[i, j] += np.linalg.norm(sol3 - exact_sol) / (np.linalg.norm(exact_sol) + 1e-6)
+                real_sol_abs[i, j] = np.linalg.norm(exact_sol)
 
         #stop the profiler
         profiler.disable()
