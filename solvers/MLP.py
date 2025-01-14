@@ -265,8 +265,8 @@ class MLP:
                     u -= wloc[:, k, q - 1][:, jnp.newaxis] * jnp.mean(y, axis=1)  # Adjust u values
                     delta_t = (cloc[:, k, q - 1] - t + 1e-6)[:, jnp.newaxis]  # Avoid division by zero, shape (batch_size, 1)
                     z -= wloc[:, k, q - 1][:, jnp.newaxis] * jnp.sum(y * W, axis=1) / (MC * delta_t)  # Adjust z values
-
-        return jnp.concatenate((u, z), axis=-1)  # Concatenate adjusted u and z values
+        output_cated = jnp.concatenate((u, z), axis=-1)  # Concatenate adjusted u and z values, shape (batch_size, dim + 1)
+        return jnp.clip(output_cated, -1, 1)  # Clip the output to avoid numerical instability
 
     def u_solve(self, n, rho, x_t):
         '''
