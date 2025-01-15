@@ -121,7 +121,7 @@ class SimpleUniform(object):
         rel_error1 = np.linalg.norm(errors1) / np.linalg.norm(exact_sol)
         rel_error2 = np.linalg.norm(errors2) / np.linalg.norm(exact_sol)
         rel_error3 = np.linalg.norm(errors3) / np.linalg.norm(exact_sol)
-        real_sol_L2 = np.linalg.norm(exact_sol)
+        real_sol_L2 = np.linalg.norm(exact_sol) / np.sqrt(exact_sol.shape[0])
         PDE_loss = self.solver1.compute_PDE_loss(data_test)
         #stop the profiler
         profiler.disable()
@@ -199,13 +199,13 @@ class SimpleUniform(object):
         
         print(f"PDE Loss->", "min:", np.min(PDE_loss), "max:", np.max(PDE_loss), "mean:", np.mean(PDE_loss))
 
-        print(f"GP L2, rho={rhomax}->","min:", np.min(errors1), "max:", np.max(errors1), "mean:", np.mean(errors1))
+        print(f"GP L1, rho={rhomax}->","min:", np.min(errors1), "max:", np.max(errors1), "mean:", np.mean(errors1))
         
         
-        print(f"MLP L2, rho={rhomax}->","min:", np.min(errors2), "max:", np.max(errors2), "mean:", np.mean(errors2))
+        print(f"MLP L1, rho={rhomax}->","min:", np.min(errors2), "max:", np.max(errors2), "mean:", np.mean(errors2))
         
         
-        print(f"ScaSML L2, rho={rhomax}->","min:", np.min(errors3), "max:", np.max(errors3), "mean:", np.mean(errors3))
+        print(f"ScaSML L1, rho={rhomax}->","min:", np.min(errors3), "max:", np.max(errors3), "mean:", np.mean(errors3))
         
         
         # Calculate the sums of positive and negative differences
