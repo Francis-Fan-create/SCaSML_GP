@@ -195,5 +195,5 @@ class MLP_full_history(object):
             ndarray: The u values for each sample in the batch, shape (batch_size, 1).
                      Here, u is the approximate solution of the PDE at the given coordinates.
         '''
-        return self.uz_solve(n, rho, x_t)[:, 0]  # Call uz_solve and return only the u values, shape (batch_size, 1)
+        return self.uz_solve(n, rho, x_t)[:, 0][:,jnp.newaxis]  # Call uz_solve and return only the u values, shape (batch_size, 1)
    

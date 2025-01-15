@@ -44,7 +44,7 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=4, n_samples=500):
+    def test(self, save_path, rhomax=2, n_samples=500):
         '''
         Compares solvers on different training iterations.
     
@@ -117,13 +117,13 @@ class ConvergenceRate(object):
             sol3 = self.solver3.u_solve(rhomax, rhomax, xt_values)
         
             # Compute errors
-            errors1 = np.abs(sol1 - exact_sol)
-            # errors2 = np.abs(sol2 - exact_sol)
-            errors3 = np.abs(sol3 - exact_sol)
+            errors1 = np.linalg.norm(sol1 - exact_sol)
+            # errors2 = np.linalg.norm(sol2 - exact_sol)
+            errors3 = np.linalg.norm(sol3 - exact_sol)
         
-            error_value1 = np.linalg.norm(errors1) / np.linalg.norm(exact_sol)
-            # error_value2 = np.linalg.norm(errors2) / np.linalg.norm(exact_sol)
-            error_value3 = np.linalg.norm(errors3) / np.linalg.norm(exact_sol)
+            error_value1 = errors1 / np.linalg.norm(exact_sol)
+            # error_value2 = errors2 / np.linalg.norm(exact_sol)
+            error_value3 = errors3 / np.linalg.norm(exact_sol)
 
             error1_list.append(error_value1)
             # error2_list.append(error_value2)

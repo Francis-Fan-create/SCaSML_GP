@@ -282,7 +282,7 @@ class ScaSML:
         eq = self.equation
         # Calculate u_breve and z_breve using uz_solve
         u_breve_z_breve = self.uz_solve(n, rho, x_t)
-        u_breve, z_breve = u_breve_z_breve[:, 0], u_breve_z_breve[:, 1:]
+        u_breve = u_breve_z_breve[:, 0][:, jnp.newaxis]
         
         u_hat = self.GP.predict(x_t)
         

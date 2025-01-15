@@ -280,5 +280,5 @@ class MLP:
         Returns:
             array: The u values for each sample in the batch, shape (batch_size, 1).
         '''
-        return self.uz_solve(n, rho, x_t)[:, 0]  # Return only the u values
+        return self.uz_solve(n, rho, x_t)[:, 0][:,jnp.newaxis]  # Return only the u values
    

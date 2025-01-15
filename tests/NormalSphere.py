@@ -131,9 +131,9 @@ class NormalSphere(object):
                 errors1[i, j] += np.linalg.norm(sol1 - exact_sol)
                 errors2[i, j] += np.linalg.norm(sol2 - exact_sol)
                 errors3[i, j] += np.linalg.norm(sol3 - exact_sol)
-                rel_error1[i, j] += np.linalg.norm(sol1 - exact_sol) / (np.linalg.norm(exact_sol) + 1e-6)
-                rel_error2[i, j] += np.linalg.norm(sol2 - exact_sol) / (np.linalg.norm(exact_sol) + 1e-6)
-                rel_error3[i, j] += np.linalg.norm(sol3 - exact_sol) / (np.linalg.norm(exact_sol) + 1e-6)
+                rel_error1[i, j] += np.linalg.norm(sol1 - exact_sol) / (np.linalg.norm(exact_sol))
+                rel_error2[i, j] += np.linalg.norm(sol2 - exact_sol) / (np.linalg.norm(exact_sol))
+                rel_error3[i, j] += np.linalg.norm(sol3 - exact_sol) / (np.linalg.norm(exact_sol))
                 real_sol_abs[i, j] = np.linalg.norm(exact_sol)
 
         #stop the profiler
