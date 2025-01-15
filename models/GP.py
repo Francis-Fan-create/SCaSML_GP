@@ -36,7 +36,7 @@ class GP(object):
         kernel = jnp.zeros((N_x,N_y))
         for i in range(N_x):
             for j in range(N_y):
-                kernel[i,j] = self.kappa(x_t[i],y_t[j])
+                kernel = kernel.at[i,j].set(self.kappa(x_t[i], y_t[j]))
         return kernel
     
     def dx_t_kappa(self,x_t,y_t):
