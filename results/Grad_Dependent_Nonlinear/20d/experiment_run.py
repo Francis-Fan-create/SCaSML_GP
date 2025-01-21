@@ -10,6 +10,7 @@ from equations.equations import Grad_Dependent_Nonlinear
 from tests.NormalSphere import NormalSphere
 from tests.SimpleUniform import SimpleUniform
 from tests.ConvergenceRate import ConvergenceRate
+from tests.InferenceScaling import InferenceScaling
 from solvers.MLP import MLP
 from solvers.ScaSML import ScaSML
 from models.GP import GP_Grad_Dependent_Nonlinear as GP
@@ -65,7 +66,9 @@ test2.test(r"results/Grad_Dependent_Nonlinear/20d")
 #run the test for ConvergenceRate
 test3=ConvergenceRate(equation,solver1,solver2,solver3)
 test3.test(r"results/Grad_Dependent_Nonlinear/20d")
-
+#run the test for ConvergenceRate
+test4=InferenceScaling(equation,solver1,solver2,solver3)
+test4.test(r"results/Grad_Dependent_Nonlinear/20d")
 
 #finish wandb
 wandb.finish()
