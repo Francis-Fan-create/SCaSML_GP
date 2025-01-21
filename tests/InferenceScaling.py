@@ -44,7 +44,7 @@ class InferenceScaling(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=5, n_samples=500):
+    def test(self, save_path, rhomax=4, n_samples=500):
         '''
         Compares solvers on different training iterations.
     
@@ -86,11 +86,10 @@ class InferenceScaling(object):
         # Fix GN_steps
         GN_steps = 1000 
         # Build a list for training sizes
-        list_len = rhomax-1
+        list_len = rhomax -1 
         train_sizes_domain = 500
         train_sizes_boundary = 100
-        rho_list = range(2, rhomax+1)
-        rho_array = np.array(rho_list)
+        eval_counter_list = []
         error1_list = []
         # error2_list = []
         error3_list = []
@@ -110,7 +109,7 @@ class InferenceScaling(object):
     
         for j in range(list_len):
 
-            rho = rho_list[j]
+            rho = j + 1
 
             # Print current rho value
             print(f"Current rho value: {rho}")
@@ -136,6 +135,8 @@ class InferenceScaling(object):
             error1_list.append(error_value1)
             # error2_list.append(error_value2)
             error3_list.append(error_value3)
+
+            eval_counter_list.append(self.solver3.evaluation_counter)
         
         # Plot error ratios
         plt.figure()
@@ -144,13 +145,14 @@ class InferenceScaling(object):
         error1_array = np.array(error1_list)
         # error2_array = np.array(error2_list)
         error3_array = np.array(error3_list)
+        evaluation_counter_array = np.array(eval_counter_list)
 
-        plt.plot(rho_array, error1_array, marker='x', linestyle='-', label='GP')
-        # plt.plot(rho_array, error2_array, marker='x', linestyle='-', label='MLP')
-        plt.plot(rho_array, error3_array, marker='x', linestyle='-', label='ScaSML')
+        plt.plot(evaluation_counter_array, error1_array, marker='x', linestyle='-', label='GP')
+        # plt.plot(evaluation_counter_array, error2_array, marker='x', linestyle='-', label='MLP')
+        plt.plot(evaluation_counter_array, error3_array, marker='x', linestyle='-', label='ScaSML')
         
         # Fit lines to compute slopes
-        log_GN_steps = np.log10(rho_array + epsilon)
+        log_GN_steps = np.log10(evaluation_counter_array + epsilon)
         log_error1 = np.log10(error1_array+ epsilon)
         # log_error2 = np.log10(error2_array+ epsilon)
         log_error3 = np.log10(error3_array+ epsilon) 
@@ -161,16 +163,16 @@ class InferenceScaling(object):
         # fitted_line2 = 10 ** (intercept2 + slope2 * log_GN_steps)
         fitted_line3 = 10 ** (intercept3 + slope3 * log_GN_steps)
         
-        plt.plot(rho_array, fitted_line1, linestyle='--', label=f'GP: slope={slope1:.2f}')
-        # plt.plot(rho_array, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
-        plt.plot(rho_array, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
+        plt.plot(evaluation_counter_array, fitted_line1, linestyle='--', label=f'GP: slope={slope1:.2f}')
+        # plt.plot(evaluation_counter_array, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
+        plt.plot(evaluation_counter_array, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
 
         plt.yscale('log')
 
         plt.legend()
         plt.grid(True, which="both", ls="--", linewidth=0.5)
         
-        plt.xlabel('MLP Level')
+        plt.xlabel('Evaluation Number')
         plt.ylabel('Mean Relative L2 Error on Test Set')
         plt.title('InferenceScaling Verification')
 
