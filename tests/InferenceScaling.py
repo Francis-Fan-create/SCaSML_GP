@@ -86,10 +86,11 @@ class InferenceScaling(object):
         # Fix GN_steps
         GN_steps = 1000 
         # Build a list for training sizes
-        list_len = 10
+        list_len = rhomax-1
         train_sizes_domain = 500
         train_sizes_boundary = 100
-        rho_list = range(1, rhomax+1)
+        rho_list = range(2, rhomax+1)
+        rho_array = np.array(rho_list)
         error1_list = []
         # error2_list = []
         error3_list = []
@@ -100,13 +101,14 @@ class InferenceScaling(object):
         xt_values_domain, xt_values_boundary = eq.generate_test_data(n_samples_domain, n_samples_boundary , random='LHS')
         xt_values = np.concatenate((xt_values_domain, xt_values_boundary), axis=0)
         exact_sol = eq.exact_solution(xt_values)
-    
+
+        # Training solver
+        print(f"Training solver1 with {train_sizes_domain} domain points and {train_sizes_boundary} boundary points...")
+        data_domain_train, data_boundary_train = eq.generate_data(train_sizes_domain, train_sizes_boundary)
+        # Train solver1 with fixed training sample size and varying GN_steps
+        self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
     
         for j in range(list_len):
-            print(f"Training solver1 with {train_sizes_domain} domain points and {train_sizes_boundary} boundary points...")
-            data_domain_train, data_boundary_train = eq.generate_data(train_sizes_domain, train_sizes_boundary)
-            # Train solver1 with fixed training sample size and varying GN_steps
-            self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
 
             rho = rho_list[j]
 
@@ -139,19 +141,16 @@ class InferenceScaling(object):
         plt.figure()
         epsilon = 1e-10  # To avoid log(0)
 
-        domain_sizes = np.array(train_sizes_domain)
-        boundary_sizes = np.array(train_sizes_boundary)
-        train_sizes = domain_sizes + boundary_sizes
         error1_array = np.array(error1_list)
         # error2_array = np.array(error2_list)
         error3_array = np.array(error3_list)
 
-        plt.plot(train_sizes, error1_array, marker='x', linestyle='-', label='GP')
-        # plt.plot(train_sizes, error2_array, marker='x', linestyle='-', label='MLP')
-        plt.plot(train_sizes, error3_array, marker='x', linestyle='-', label='ScaSML')
+        plt.plot(rho_array, error1_array, marker='x', linestyle='-', label='GP')
+        # plt.plot(rho_array, error2_array, marker='x', linestyle='-', label='MLP')
+        plt.plot(rho_array, error3_array, marker='x', linestyle='-', label='ScaSML')
         
         # Fit lines to compute slopes
-        log_GN_steps = np.log10(train_sizes + epsilon)
+        log_GN_steps = np.log10(rho_array + epsilon)
         log_error1 = np.log10(error1_array+ epsilon)
         # log_error2 = np.log10(error2_array+ epsilon)
         log_error3 = np.log10(error3_array+ epsilon) 
@@ -162,9 +161,9 @@ class InferenceScaling(object):
         # fitted_line2 = 10 ** (intercept2 + slope2 * log_GN_steps)
         fitted_line3 = 10 ** (intercept3 + slope3 * log_GN_steps)
         
-        plt.plot(train_sizes, fitted_line1, linestyle='--', label=f'GP: slope={slope1:.2f}')
-        # plt.plot(train_sizes, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
-        plt.plot(train_sizes, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
+        plt.plot(rho_array, fitted_line1, linestyle='--', label=f'GP: slope={slope1:.2f}')
+        # plt.plot(rho_array, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
+        plt.plot(rho_array, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
 
         plt.yscale('log')
 
