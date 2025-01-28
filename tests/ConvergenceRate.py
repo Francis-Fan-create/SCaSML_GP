@@ -140,9 +140,9 @@ class ConvergenceRate(object):
         # error2_array = np.array(error2_list)
         error3_array = np.array(error3_list)
 
-        plt.plot(train_sizes, error1_array, marker='x', linestyle='-', label='GP')
-        # plt.plot(train_sizes, error2_array, marker='x', linestyle='-', label='MLP')
-        plt.plot(train_sizes, error3_array, marker='x', linestyle='-', label='ScaSML')
+        # plt.plot(train_sizes, error1_array, marker='x', linestyle='-', label='GP')
+        # # plt.plot(train_sizes, error2_array, marker='x', linestyle='-', label='MLP')
+        # plt.plot(train_sizes, error3_array, marker='x', linestyle='-', label='ScaSML')
         
         # Fit lines to compute slopes
         log_GN_steps = np.log10(train_sizes + epsilon)
