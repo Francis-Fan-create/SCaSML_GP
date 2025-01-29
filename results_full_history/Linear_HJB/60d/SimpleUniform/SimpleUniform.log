@@ -1,6 +1,6 @@
-Total time for GP: 0.4715244770050049 seconds
-Total time for MLP: 7.410415172576904 seconds
-Total time for ScaSML: 15.42960238456726 seconds
+Total time for GP: 0.4526524543762207 seconds
+Total time for MLP: 6.898981809616089 seconds
+Total time for ScaSML: 15.009702205657959 seconds
 GP rel L2, rho=2-> 0.4745234333735362
 MLP rel L2, rho=2-> 1.1801687317360614
 ScaSML rel L2, rho=2-> 0.3876246285813408
