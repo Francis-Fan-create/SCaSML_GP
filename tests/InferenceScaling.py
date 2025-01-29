@@ -163,9 +163,9 @@ class InferenceScaling(object):
         fitted_line2 = 10 ** (intercept2 + slope2 * log_GN_steps)
         fitted_line3 = 10 ** (intercept3 + slope3 * log_GN_steps)
         
-        plt.plot(evaluation_counter_array, fitted_line1, linestyle='--', label=f'GP: slope={slope1:.2f}')
-        plt.plot(evaluation_counter_array, fitted_line2, linestyle='--', label=f'MLP: slope={slope2:.2f}')
-        plt.plot(evaluation_counter_array, fitted_line3, linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
+        plt.plot(evaluation_counter_array, fitted_line1, marker='x', linestyle='--', label=f'GP: slope={slope1:.2f}')
+        plt.plot(evaluation_counter_array, fitted_line2, marker='x', linestyle='--', label=f'MLP: slope={slope2:.2f}')
+        plt.plot(evaluation_counter_array, fitted_line3, marker='x', linestyle='--', label=f'SCaSML: slope={slope3:.2f}')
 
         plt.yscale('log')
 
