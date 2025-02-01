@@ -490,7 +490,7 @@ class GP(object):
             gradient = grad_J(sol, rhs_f, bdy_g, L)
             grad_norm = jnp.linalg.norm(gradient)
     
-            # Update parameters using Adam optimizer
+            # Update parameters using Adan optimizer
             updates, opt_state = optimizer.update(gradient, opt_state, sol)
             sol = optax.apply_updates(sol, updates)
     
