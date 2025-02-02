@@ -243,6 +243,7 @@ class Grad_Dependent_Nonlinear(Equation):
         '''
         super().__init__(n_input, n_output)
         self.uncertainty = 1e-1
+        self.norm_estimation = 1
     
     @partial(jit,static_argnames=["self"])
     def terminal_constraint(self, x_t):
@@ -430,6 +431,7 @@ class Linear_HJB(Equation):
         '''
         super().__init__(n_input, n_output)
         self.uncertainty = 1
+        self.norm_estimation = 100
     
     @partial(jit,static_argnames=["self"])
     def terminal_constraint(self, x_t):
