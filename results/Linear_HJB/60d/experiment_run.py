@@ -7,7 +7,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 # import the required libraries
 from equations.equations import Linear_HJB
-from tests.NormalSphere import NormalSphere
 from tests.SimpleUniform import SimpleUniform
 from tests.ConvergenceRate import ConvergenceRate
 from tests.InferenceScaling import InferenceScaling
@@ -57,9 +56,6 @@ solver2=MLP(equation=equation) #Multilevel Picard object
 solver3=ScaSML(equation=equation,GP=solver1) #ScaSML object
 
 
-# #run the test for NormalSphere
-# test1=NormalSphere(equation,solver1,solver2,solver3)
-# rhomax=test1.test(r"results/Linear_HJB/60d")
 #run the test for SimpleUniform
 test2=SimpleUniform(equation,solver1,solver2,solver3)
 test2.test(r"results/Linear_HJB/60d")
