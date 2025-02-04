@@ -9,6 +9,7 @@ import cProfile
 import shutil
 import copy
 from scipy.stats import t
+import matplotlib.ticker as ticker
 
 class InferenceScaling(object):
     '''
@@ -45,7 +46,7 @@ class InferenceScaling(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=4, n_samples=500):
+    def test(self, save_path, rhomax=3, n_samples=500):
         '''
         Compares solvers on different training iterations.
     
@@ -87,7 +88,7 @@ class InferenceScaling(object):
         # Fix GN_steps
         GN_steps = 1000 
         # Build a list for training sizes
-        list_len = rhomax -1 
+        list_len = rhomax
         train_sizes_domain = 500
         train_sizes_boundary = 100
         eval_counter_list = []
@@ -274,6 +275,12 @@ class InferenceScaling(object):
         ax.set_xscale('log')
         ax.set_xlim(left=0)  # Keep linear scale per request
 
+        # Set x-ticks (manually) and rotate the labels
+        formatter = ticker.ScalarFormatter(useMathText=True)
+        formatter.set_powerlimits((0, 6))  
+        ax.xaxis.set_major_formatter(formatter)
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+
         # Create minimalist legend
         legend_elements = [
             plt.Line2D([0], [0], color=COLOR_PALETTE['GP'], lw=1.2,
@@ -294,6 +301,7 @@ class InferenceScaling(object):
         # ======================
         # Output Configuration
         # ======================
+        plt.tight_layout()
         plt.savefig(f'{save_path}/InferenceScaling_Verification.pdf',  # Vector format preferred
                   format='pdf', bbox_inches='tight', pad_inches=0.05)
         plt.close()

@@ -25,6 +25,7 @@ from jax import config
 dde.config.set_random_seed(1234)
 #use jax backend
 dde.backend.set_default_backend('jax')
+dde.config.set_default_float("float16")
 # fix random seed for numpy
 np.random.seed(1234)
 # fix random seed for jax
