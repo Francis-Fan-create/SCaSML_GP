@@ -272,7 +272,7 @@ class Grad_Dependent_Nonlinear(Equation):
         '''
         sigma = self.sigma()
         d = self.n_input - 1
-        result = -1/(d * sigma) - sigma/ 2
+        result = -1/d - sigma**2/ 2
         return result
     
     def sigma(self, x_t=0):
