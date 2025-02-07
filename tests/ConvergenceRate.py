@@ -45,7 +45,7 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=2, n_samples=500):
+    def test(self, save_path, rhomax=2, n_samples=1000):
         '''
         Compares solvers on different training iterations.
     
@@ -168,7 +168,7 @@ class ConvergenceRate(object):
 
         # Configure matplotlib rcParams for publication quality
         plt.rcParams.update({
-            'font.family': 'Arial',        # Set font family
+            'font.family': 'DejaVu Sans',        # Set font family
             'font.size': 9,                # Base font size
             'axes.labelsize': 10,          # Axis label size
             'axes.titlesize': 0,           # Disable title (per request)
@@ -232,25 +232,33 @@ class ConvergenceRate(object):
                                             [ci_upper1, ci_upper3],
                                             [ci_lower1, ci_lower3]):
             ax.fill_between(train_sizes, ci_lower, ci_upper,
-                          color=COLOR_PALETTE[method], alpha=fill_alpha, 
-                          linewidth=0, zorder=1)
+                        color=COLOR_PALETTE[method], alpha=fill_alpha, 
+                        linewidth=0, zorder=1)
 
-        # Plot regression lines with distinct markers
+        # Plot original data points with distinct markers
         marker_params = {
             'GP': {'marker': 'o', 'facecolor': 'none', 'edgewidth': 0.8},
             'SCaSML': {'marker': '^', 'facecolor': 'none', 'edgewidth': 0.8}
         }
 
+        for method, error_array in zip(['GP', 'SCaSML'],
+                                    [error1_array, error3_array]):
+            ax.plot(train_sizes, error_array,
+                color=COLOR_PALETTE[method],
+                linestyle='',  # No line connecting points
+                marker=marker_params[method]['marker'],
+                markersize=4,
+                markeredgewidth=marker_params[method]['edgewidth'],
+                markerfacecolor=marker_params[method]['facecolor'],
+                zorder=2)
+
+        # Plot fitted lines with dashed style
         for method, line in zip(['GP', 'SCaSML'],
-                              [fitted_line1, fitted_line3]):
+                            [fitted_line1, fitted_line3]):
             ax.plot(train_sizes, line,
-                  color=COLOR_PALETTE[method],
-                  linestyle='--',
-                  marker=marker_params[method]['marker'],
-                  markersize=4,
-                  markeredgewidth=marker_params[method]['edgewidth'],
-                  markerfacecolor=marker_params[method]['facecolor'],
-                  zorder=2)
+                color=COLOR_PALETTE[method],
+                linestyle='--',
+                zorder=3)
 
         # ======================
         # Aesthetic Refinements
