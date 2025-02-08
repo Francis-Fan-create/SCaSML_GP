@@ -488,7 +488,7 @@ class Linear_HJB(Equation):
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
         return 2 * jnp.ones_like(u)  # Shape: (batch_size, n_output)
-    
+
     @partial(jit,static_argnames=["self"])
     def exact_solution(self, x_t):
         '''
