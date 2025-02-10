@@ -52,19 +52,23 @@ wandb.config.update({"device": device.type}) # record device type
 equation=Grad_Dependent_Nonlinear(n_input=41,n_output=1)
 
 #initialize the normal sphere test
-solver1=GP(equation=equation) #GP solver
+solver1_1=GP(equation=equation) #GP solver
+solver1_2=GP(equation=equation) #GP solver
+solver1_3=GP(equation=equation) #GP solver
 solver2=MLP(equation=equation) #Multilevel Picard object
-solver3=ScaSML(equation=equation,GP=solver1) #ScaSML object
+solver3_1=ScaSML(equation=equation,GP=solver1_1) #ScaSML object
+solver3_2=ScaSML(equation=equation,GP=solver1_2) #ScaSML object
+solver3_3=ScaSML(equation=equation,GP=solver1_3) #ScaSML object
 
 
 #run the test for SimpleUniform
-test2=SimpleUniform(equation,solver1,solver2,solver3)
+test2=SimpleUniform(equation,solver1_1,solver2,solver3_1)
 test2.test(r"results/Grad_Dependent_Nonlinear/40d")
 #run the test for ConvergenceRate
-test3=ConvergenceRate(equation,solver1,solver2,solver3)
+test3=ConvergenceRate(equation,solver1_2,solver2,solver3_2)
 test3.test(r"results/Grad_Dependent_Nonlinear/40d")
 # #run the test for InferenceScaling
-# test4=InferenceScaling(equation,solver1,solver2,solver3)
+# test4=InferenceScaling(equation,solver1_3,solver2,solver3_3)
 # test4.test(r"results/Grad_Dependent_Nonlinear/40d")
 
 #finish wandb
