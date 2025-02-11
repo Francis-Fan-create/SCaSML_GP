@@ -3,6 +3,7 @@ import jax.numpy as jnp
 from jax import grad, vmap, hessian, jit, random, lax, value_and_grad
 import jax.ops as jop
 import optax
+import folx
 
     
 class GP(object):
@@ -24,6 +25,7 @@ class GP(object):
         self.d= self.n_input-1 # Number of spatial dimensions
         self.sigma= equation.sigma()*jnp.sqrt(self.d) # Standard deviation for Gaussian kernel
         self.nugget = 1e-2  # Regularization parameter to ensure numerical stability
+        self.laplacian_op = folx.ForwardLaplacianOperator(6)
     
     def kappa(self,x_t,y_t):
         '''Compute the kernel entry K(x_t,y_t) for single vector x_t and y_t'''
@@ -73,14 +75,20 @@ class GP(object):
     
     def laplacian_x_t_kappa(self,x_t,y_t):
         '''Compute Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t'''
-        hessian_kappa = hessian(self.kappa,argnums=0)(x_t,y_t)[:-1,:-1]
-        laplacian_x_t_kappa = jnp.trace(hessian_kappa,axis1=0,axis2=1)
+        # hessian_kappa = hessian(self.kappa,argnums=0)(x_t,y_t)[:-1,:-1]
+        # laplacian_x_t_kappa = jnp.trace(hessian_kappa,axis1=0,axis2=1)
+        t_x = x_t[0]
+        kappa_x_t = lambda x: self.kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
+        laplacian_x_t_kappa = self.laplacian_op(kappa_x_t)
         return laplacian_x_t_kappa
     
     def laplacian_y_t_kappa(self,x_t,y_t):
         '''Compute Laplacian of the kernel matrix K(x_t,y_t) with respect to y_t'''
-        hessian_kappa = hessian(self.kappa,argnums=1)(x_t,y_t)[:-1,:-1]
-        laplacian_y_t_kappa = jnp.trace(hessian_kappa,axis1=0,axis2=1)
+        # hessian_kappa = hessian(self.kappa,argnums=1)(x_t,y_t)[:-1,:-1]
+        # laplacian_y_t_kappa = jnp.trace(hessian_kappa,axis1=0,axis2=1)
+        t_y = y_t[0]
+        kappa_y_t = lambda y: self.kappa(x_t,jnp.concatenate((y,t_y))) # Compute kernel with y only
+        laplacian_y_t_kappa = self.laplacian_op(kappa_y_t)
         return laplacian_y_t_kappa
     
     def dt_x_t_dt_y_t_kappa(self,x_t,y_t):
@@ -97,8 +105,11 @@ class GP(object):
     
     def dt_x_t_laplacian_y_t_kappa(self,x_t,y_t):
         '''Compute time derivative of the Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
-        hessian_dt_x_t_kappa = hessian(self.dt_x_t_kappa,argnums=1)(x_t,y_t)[:-1,:-1]
-        dt_x_t_laplacian_y_t_kappa = jnp.trace(hessian_dt_x_t_kappa,axis1=0,axis2=1)
+        # hessian_dt_x_t_kappa = hessian(self.dt_x_t_kappa,argnums=1)(x_t,y_t)[:-1,:-1]
+        # dt_x_t_laplacian_y_t_kappa = jnp.trace(hessian_dt_x_t_kappa,axis1=0,axis2=1)
+        t_y = y_t[0]
+        dt_x_t_kappa_y_t = lambda y: self.dt_x_t_kappa(x_t, jnp.concatenate((y,t_y))) # Compute kernel with x only
+        dt_x_t_laplacian_y_t_kappa = self.laplacian_op(dt_x_t_kappa_y_t)
         return dt_x_t_laplacian_y_t_kappa
     
     def div_x_dt_y_t_kappa(self,x_t,y_t):
@@ -115,26 +126,38 @@ class GP(object):
     
     def div_x_laplacian_y_t_kappa(self,x_t,y_t):
         '''Compute divergence of the Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
-        hessian_div_x_kappa = hessian(self.div_x_kappa,argnums=1)(x_t,y_t)[:-1,:-1]
-        div_x_laplacian_y_t_kappa = jnp.trace(hessian_div_x_kappa,axis1=0,axis2=1)
+        # hessian_div_x_kappa = hessian(self.div_x_kappa,argnums=1)(x_t,y_t)[:-1,:-1]
+        # div_x_laplacian_y_t_kappa = jnp.trace(hessian_div_x_kappa,axis1=0,axis2=1)
+        t_y = y_t[0]
+        div_x_kappa_y_t = lambda y: self.div_x_kappa(x_t, jnp.concatenate((y,t_y))) # Compute kernel with x only
+        div_x_laplacian_y_t_kappa = self.laplacian_op(div_x_kappa_y_t)
         return div_x_laplacian_y_t_kappa
     
     def laplacian_x_t_dt_y_t_kappa(self,x_t,y_t):
         '''Compute time derivative of the Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
-        hessian_dt_y_t_kappa = hessian(self.dt_y_t_kappa,argnums=0)(x_t,y_t)[:-1,:-1]
-        laplacian_x_t_dt_y_t_kappa = jnp.trace(hessian_dt_y_t_kappa,axis1=0,axis2=1)
+        # hessian_dt_y_t_kappa = hessian(self.dt_y_t_kappa,argnums=0)(x_t,y_t)[:-1,:-1]
+        # laplacian_x_t_dt_y_t_kappa = jnp.trace(hessian_dt_y_t_kappa,axis1=0,axis2=1)
+        t_x = x_t[0]
+        dt_y_t_kappa = lambda x: self.dt_y_t_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
+        laplacian_x_t_dt_y_t_kappa = self.laplacian_op(dt_y_t_kappa)
         return laplacian_x_t_dt_y_t_kappa
     
     def laplacian_x_t_div_y_kappa(self,x_t,y_t):
         '''Compute Laplacian of the divergence of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
-        hessian_div_y_kappa = hessian(self.div_y_kappa,argnums=0)(x_t,y_t)[:-1,:-1]
-        laplacian_x_t_div_y_kappa = jnp.trace(hessian_div_y_kappa,axis1=0,axis2=1)
+        # hessian_div_y_kappa = hessian(self.div_y_kappa,argnums=0)(x_t,y_t)[:-1,:-1]
+        # laplacian_x_t_div_y_kappa = jnp.trace(hessian_div_y_kappa,axis1=0,axis2=1)
+        t_x = x_t[0]
+        div_y_kappa = lambda x: self.div_y_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
+        laplacian_x_t_div_y_kappa = self.laplacian_op(div_y_kappa)
         return laplacian_x_t_div_y_kappa
     
     def laplacian_x_t_laplacian_y_t_kappa(self,x_t,y_t):
         '''Compute Laplacian of the Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
-        hessian_laplacian_y_t_kappa = hessian(self.laplacian_y_t_kappa,argnums=0)(x_t,y_t)[:-1,:-1]
-        laplacian_x_t_laplacian_y_t_kappa = jnp.trace(hessian_laplacian_y_t_kappa,axis1=0,axis2=1)
+        # hessian_laplacian_y_t_kappa = hessian(self.laplacian_y_t_kappa,argnums=0)(x_t,y_t)[:-1,:-1]
+        # laplacian_x_t_laplacian_y_t_kappa = jnp.trace(hessian_laplacian_y_t_kappa,axis1=0,axis2=1)
+        t_x = x_t[0]
+        laplacian_y_t_kappa = lambda x: self.laplacian_y_t_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
+        laplacian_x_t_laplacian_y_t_kappa = self.laplacian_op(laplacian_y_t_kappa)
         return laplacian_x_t_laplacian_y_t_kappa
     
     
