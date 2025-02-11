@@ -49,7 +49,7 @@ wandb.init(project="Grad_Dependent_Nonlinear", notes="80 d", tags=["Gaussian Pro
 wandb.config.update({"device": device.type}) # record device type
 
 #initialize the equation
-equation=Grad_Dependent_Nonlinear(n_input=21,n_output=1)
+equation=Grad_Dependent_Nonlinear(n_input=81,n_output=1)
 
 #initialize the normal sphere test
 solver1_1=GP(equation=equation) #GP solver
