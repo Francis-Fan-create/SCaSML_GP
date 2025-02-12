@@ -25,17 +25,17 @@ class GP(object):
         self.d= self.n_input-1 # Number of spatial dimensions
         self.sigma= equation.sigma()*jnp.sqrt(self.d) # Standard deviation for Gaussian kernel
         self.nugget = 1e-2  # Regularization parameter to ensure numerical stability
-        self.laplacian_op = folx.forward_laplacian(0.6)
+        self.laplacian_op = folx.forward_laplacian
     
     def kappa(self,x_t,y_t):
         '''Compute the kernel entry K(x_t,y_t) for single vector x_t and y_t'''
-        return jnp.exp(-jnp.sum((x_t-y_t)**2)/(2*self.sigma**2)).astype(jnp.float8_e5m2)  # Gaussian kernel
+        return jnp.exp(-jnp.sum((x_t-y_t)**2)/(2*self.sigma**2))  # Gaussian kernel
     
     def kappa_kernel(self,x_t,y_t):
         '''Compute the kernel matrix K(x_t,y_t) for batched vectors x_t and y_t'''
         N_x = x_t.shape[0]
         N_y = y_t.shape[0]
-        kernel = jnp.zeros((N_x,N_y),dtype=jnp.float8_e5m2)
+        kernel = jnp.zeros((N_x,N_y))
         for i in range(N_x):
             for j in range(N_y):
                 kernel = kernel.at[i,j].set(self.kappa(x_t[i], y_t[j]))
@@ -43,7 +43,7 @@ class GP(object):
     
     def dx_t_kappa(self,x_t,y_t):
         '''Compute gradient of the kernel matrix K(x_t,y_t) with respect to x_t'''
-        return grad(self.kappa,argnums=0)(x_t,y_t).astype(jnp.float8_e5m2)
+        return grad(self.kappa,argnums=0)(x_t,y_t)
     
     def dt_x_t_kappa(self,x_t,y_t):
         '''Compute time derivative of the kernel matrix K(x_t,y_t) with respect to x_t'''
@@ -53,7 +53,7 @@ class GP(object):
     
     def dy_t_kappa(self,x_t,y_t):
         '''Compute gradient of the kernel matrix K(x_t,y_t) with respect to y_t'''
-        return grad(self.kappa,argnums=1)(x_t,y_t).astype(jnp.float8_e5m2)
+        return grad(self.kappa,argnums=1)(x_t,y_t)
     
     def dt_y_t_kappa(self,x_t,y_t):
         '''Compute time derivative of the kernel matrix K(x_t,y_t) with respect to y_t'''
@@ -182,59 +182,59 @@ class GP(object):
 
         # Compute kernel blocks using vectorization
         # K11: Kernel between x_t_domain and x_t_domain using kappa
-        K11 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K11 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K12: Kernel between x_t_domain and x_t_boundary using kappa
-        K12 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_domain).astype(jnp.float8_e5m2)
+        K12 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_domain)
         # K13: Kernel between x_t_domain and x_t_domain using laplacian_y_t_kappa
-        K13 = jit(vmap(lambda x_i: vmap(self.laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K13 = jit(vmap(lambda x_i: vmap(self.laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K14: Kernel between x_t_domain and x_t_domain using dt_y_t_kappa
-        K14 = jit(vmap(lambda x_i: vmap(self.dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K14 = jit(vmap(lambda x_i: vmap(self.dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K15: Kernel between x_t_domain and x_t_domain using div_y_kappa
-        K15 = jit(vmap(lambda x_i: vmap(self.div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K15 = jit(vmap(lambda x_i: vmap(self.div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
 
         # K21: Kernel between x_t_boundary and x_t_domain using kappa
-        K21 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_boundary).astype(jnp.float8_e5m2)
+        K21 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_boundary)
         # K22: Kernel between x_t_boundary and x_t_boundary using kappa
-        K22 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_boundary).astype(jnp.float8_e5m2)
+        K22 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_boundary)
         # K23: Kernel between x_t_boundary and x_t_domain using laplacian_y_t_kappa
-        K23 = jit(vmap(lambda x_i: vmap(self.laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_boundary).astype(jnp.float8_e5m2)
+        K23 = jit(vmap(lambda x_i: vmap(self.laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_boundary)
         # K24: Kernel between x_t_boundary and x_t_domain using dt_y_t_kappa
-        K24 = jit(vmap(lambda x_i: vmap(self.dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_boundary).astype(jnp.float8_e5m2)
+        K24 = jit(vmap(lambda x_i: vmap(self.dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_boundary)
         # K25: Kernel between x_t_boundary and x_t_domain using div_y_kappa
-        K25 = jit(vmap(lambda x_i: vmap(self.div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_boundary).astype(jnp.float8_e5m2)
+        K25 = jit(vmap(lambda x_i: vmap(self.div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_boundary)
 
         # K31: Kernel between laplacian_x_t_kappa and x_t_domain
-        K31 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K31 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K32: Kernel between laplacian_x_t_kappa and x_t_boundary
-        K32 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_domain).astype(jnp.float8_e5m2)
+        K32 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_domain)
         # K33: Kernel between laplacian_x_t_kappa and laplacian_y_t_kappa
-        K33 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K33 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K34: Kernel between laplacian_x_t_kappa and dt_y_t_kappa
-        K34 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K34 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K35: Kernel between laplacian_x_t_kappa and div_y_kappa
-        K35 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K35 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
 
         # K41: Kernel between dt_x_t_kappa and x_t_domain
-        K41 = jit(vmap(lambda x_i: vmap(self.dt_x_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K41 = jit(vmap(lambda x_i: vmap(self.dt_x_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K42: Kernel between dt_x_t_kappa and x_t_boundary
-        K42 = jit(vmap(lambda x_i: vmap(self.dt_x_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_domain).astype(jnp.float8_e5m2)
+        K42 = jit(vmap(lambda x_i: vmap(self.dt_x_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_domain)
         # K43: Kernel between dt_x_t_kappa and laplacian_y_t_kappa
-        K43 = jit(vmap(lambda x_i: vmap(self.dt_x_t_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K43 = jit(vmap(lambda x_i: vmap(self.dt_x_t_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K44: Kernel between dt_x_t_kappa and dt_y_t_kappa
-        K44 = jit(vmap(lambda x_i: vmap(self.dt_x_t_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K44 = jit(vmap(lambda x_i: vmap(self.dt_x_t_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K45: Kernel between dt_x_t_kappa and div_y_kappa
-        K45 = jit(vmap(lambda x_i: vmap(self.dt_x_t_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K45 = jit(vmap(lambda x_i: vmap(self.dt_x_t_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
 
         # K51: Kernel between div_x_kappa and x_t_domain
-        K51 = jit(vmap(lambda x_i: vmap(self.div_x_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K51 = jit(vmap(lambda x_i: vmap(self.div_x_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K52: Kernel between div_x_kappa and x_t_boundary
-        K52 = jit(vmap(lambda x_i: vmap(self.div_x_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_domain).astype(jnp.float8_e5m2)
+        K52 = jit(vmap(lambda x_i: vmap(self.div_x_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_domain)
         # K53: Kernel between div_x_kappa and laplacian_y_t_kappa
-        K53 = jit(vmap(lambda x_i: vmap(self.div_x_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K53 = jit(vmap(lambda x_i: vmap(self.div_x_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K54: Kernel between div_x_kappa and dt_y_t_kappa
-        K54 = jit(vmap(lambda x_i: vmap(self.div_x_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K54 = jit(vmap(lambda x_i: vmap(self.div_x_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
         # K55: Kernel between div_x_kappa and div_y_kappa
-        K55 = jit(vmap(lambda x_i: vmap(self.div_x_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain).astype(jnp.float8_e5m2)
+        K55 = jit(vmap(lambda x_i: vmap(self.div_x_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_domain)
 
         # Assemble the full kernel matrix
         row1 = jnp.hstack([K11, K12, K13, K14, K15])  # Shape: (N_domain, phi_dim)
@@ -252,7 +252,7 @@ class GP(object):
         cholesky_phi_phi_perturb = U @ jnp.diag(jnp.sqrt(S_perturb))
         if jnp.any(jnp.isnan(cholesky_phi_phi_perturb)):
             raise ValueError("Cholesky decomposition resulted in NaN values.")
-        self.cholesky_phi_phi_perturb = cholesky_phi_phi_perturb.astype(jnp.float8_e5m2)   
+        self.cholesky_phi_phi_perturb = cholesky_phi_phi_perturb.astype(jnp.float16)    
         kernel_phi_phi_perturb = cholesky_phi_phi_perturb @ cholesky_phi_phi_perturb.T
         return kernel_phi_phi_perturb
     
@@ -266,15 +266,15 @@ class GP(object):
     
         # Compute blocks of the kernel matrix
         # K1: Kappa between x_t_infer and x_t_domain
-        K1 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain)
+        K1 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain)
         # K2: Kappa between x_t_infer and x_t_boundary
-        K2 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_boundary)
+        K2 = jit(vmap(lambda x_i: vmap(self.kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer)  # Shape: (N_infer, N_boundary)
         # K3: Laplacian_y_t_kappa between x_t_infer and x_t_domain
-        K3 = jit(vmap(lambda x_i: vmap(self.laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain)
+        K3 = jit(vmap(lambda x_i: vmap(self.laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain)
         # K4: dt_y_t_kappa between x_t_infer and x_t_domain
-        K4 = jit(vmap(lambda x_i: vmap(self.dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain)
+        K4 = jit(vmap(lambda x_i: vmap(self.dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain)
         # K5: div_y_kappa between x_t_infer and x_t_domain
-        K5 = jit(vmap(lambda x_i: vmap(self.div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain)
+        K5 = jit(vmap(lambda x_i: vmap(self.div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain)
     
         # Concatenate blocks horizontally to form the full matrix
         kernel_x_phi = jnp.hstack([K1, K2, K3, K4, K5])  # Shape: (N_infer, col_dim)
@@ -293,18 +293,18 @@ class GP(object):
 
         # Compute blocks of the gradient matrix
         # G1: dx_t_kappa between x_t_infer and x_t_domain
-        G1 = jit(vmap(lambda x_i: vmap(self.dx_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain, n_input)
+        G1 = jit(vmap(lambda x_i: vmap(self.dx_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain, n_input)
         # G2: dx_t_kappa between x_t_infer and x_t_boundary
-        G2 = jit(vmap(lambda x_i: vmap(self.dx_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_boundary, n_input)
+        G2 = jit(vmap(lambda x_i: vmap(self.dx_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer)  # Shape: (N_infer, N_boundary, n_input)
 
         # G3: Compute gradient for laplacian_y_t_kappa
-        G3 = jit(vmap(lambda x_i: vmap(grad(self.laplacian_y_t_kappa,argnums=0), in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain, n_input)
+        G3 = jit(vmap(lambda x_i: vmap(grad(self.laplacian_y_t_kappa,argnums=0), in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain, n_input)
 
         # G4: Compute gradient for dt_y_t_kappa
-        G4 = jit(vmap(lambda x_i: vmap(grad(self.dt_y_t_kappa,argnums=0), in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain, n_input)
+        G4 = jit(vmap(lambda x_i: vmap(grad(self.dt_y_t_kappa,argnums=0), in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain, n_input)
 
         # G5: Compute gradient for div_y_kappa
-        G5 = jit(vmap(lambda x_i: vmap(grad(self.div_y_kappa,argnums=0), in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain, n_input)
+        G5 = jit(vmap(lambda x_i: vmap(grad(self.div_y_kappa,argnums=0), in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain, n_input)
 
         # Concatenate blocks horizontally
         dx_t_kernel_x_phi = jnp.concatenate([G1, G2, G3, G4, G5], axis=1)  # Shape: (N_infer, col_dim, n_input)
@@ -322,19 +322,19 @@ class GP(object):
 
         # Compute blocks using vectorization
         # Block 1: Columns 0 to N_domain - 1
-        K1 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain)
+        K1 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain)
 
         # Block 2: Columns N_domain to N_domain + N_boundary - 1
-        K2 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_boundary)
+        K2 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer)  # Shape: (N_infer, N_boundary)
 
         # Block 3: Columns N_domain + N_boundary to 2 * N_domain + N_boundary - 1
-        K3 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain)
+        K3 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain)
 
         # Block 4: Columns 2 * N_domain + N_boundary to 3 * N_domain + N_boundary - 1
-        K4 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain)
+        K4 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain)
 
         # Block 5: Columns 3 * N_domain + N_boundary to col_dim - 1
-        K5 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)  # Shape: (N_infer, N_domain)
+        K5 = jit(vmap(lambda x_i: vmap(self.laplacian_x_t_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)  # Shape: (N_infer, N_domain)
 
         # Concatenate blocks horizontally to form the full matrix
         laplacian_x_t_kernel_x_phi = jnp.hstack([K1, K2, K3, K4, K5])  # Shape: (N_infer, col_dim)
@@ -351,19 +351,19 @@ class GP(object):
 
         # Compute blocks using vectorization
         # Block 1: Columns 0 to N_domain - 1
-        K1 = jit(vmap(lambda x_i: vmap(self.dt_x_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)
+        K1 = jit(vmap(lambda x_i: vmap(self.dt_x_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)
 
         # Block 2: Columns N_domain to N_domain + N_boundary - 1
-        K2 = jit(vmap(lambda x_i: vmap(self.dt_x_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer).astype(jnp.float8_e5m2)
+        K2 = jit(vmap(lambda x_i: vmap(self.dt_x_t_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer)
 
         # Block 3: Columns N_domain + N_boundary to 2 * N_domain + N_boundary - 1
-        K3 = jit(vmap(lambda x_i: vmap(self.dt_x_t_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)
+        K3 = jit(vmap(lambda x_i: vmap(self.dt_x_t_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)
 
         # Block 4: Columns 2 * N_domain + N_boundary to 3 * N_domain + N_boundary - 1
-        K4 = jit(vmap(lambda x_i: vmap(self.dt_x_t_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)
+        K4 = jit(vmap(lambda x_i: vmap(self.dt_x_t_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)
 
         # Block 5: Columns 3 * N_domain + N_boundary to col_dim - 1
-        K5 = jit(vmap(lambda x_i: vmap(self.dt_x_t_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)
+        K5 = jit(vmap(lambda x_i: vmap(self.dt_x_t_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)
 
         # Concatenate blocks horizontally
         dt_x_t_kernel_x_phi = jnp.hstack([K1, K2, K3, K4, K5])  # Shape: (N_infer, col_dim)
@@ -380,19 +380,19 @@ class GP(object):
 
         # Compute blocks using vectorization
         # Block 1: Columns 0 to N_domain - 1
-        K1 = jit(vmap(lambda x_i: vmap(self.div_x_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)
+        K1 = jit(vmap(lambda x_i: vmap(self.div_x_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)
 
         # Block 2: Columns N_domain to N_domain + N_boundary - 1
-        K2 = jit(vmap(lambda x_i: vmap(self.div_x_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer).astype(jnp.float8_e5m2)
+        K2 = jit(vmap(lambda x_i: vmap(self.div_x_kappa, in_axes=(None, 0))(x_i, x_t_boundary)))(x_t_infer)
 
         # Block 3: Columns N_domain + N_boundary to 2 * N_domain + N_boundary - 1
-        K3 = jit(vmap(lambda x_i: vmap(self.div_x_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)
+        K3 = jit(vmap(lambda x_i: vmap(self.div_x_laplacian_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)
 
         # Block 4: Columns 2 * N_domain + N_boundary to 3 * N_domain + N_boundary - 1
-        K4 = jit(vmap(lambda x_i: vmap(self.div_x_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)
+        K4 = jit(vmap(lambda x_i: vmap(self.div_x_dt_y_t_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)
 
         # Block 5: Columns 3 * N_domain + N_boundary to col_dim - 1
-        K5 = jit(vmap(lambda x_i: vmap(self.div_x_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer).astype(jnp.float8_e5m2)
+        K5 = jit(vmap(lambda x_i: vmap(self.div_x_div_y_kappa, in_axes=(None, 0))(x_i, x_t_domain)))(x_t_infer)
 
         # Concatenate blocks horizontally
         div_x_t_kernel_x_phi = jnp.hstack([K1, K2, K3, K4, K5])  # Shape: (N_infer, col_dim)
