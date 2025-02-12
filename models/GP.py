@@ -80,7 +80,7 @@ class GP(object):
         t_x = x_t[0,jnp.newaxis]
         x = x_t[1:]
         kappa_x_t = lambda x: self.kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
-        laplacian_x_t_kappa = self.laplacian_op(kappa_x_t)
+        laplacian_x_t_kappa = self.laplacian_op(kappa_x_t,0.6)
         return laplacian_x_t_kappa(x).laplacian
     
     def laplacian_y_t_kappa(self,x_t,y_t):
@@ -90,7 +90,7 @@ class GP(object):
         t_y = y_t[0,jnp.newaxis]
         y = y_t[1:]
         kappa_y_t = lambda y: self.kappa(x_t,jnp.concatenate((y,t_y))) # Compute kernel with y only
-        laplacian_y_t_kappa = self.laplacian_op(kappa_y_t)
+        laplacian_y_t_kappa = self.laplacian_op(kappa_y_t,0.6)
         return laplacian_y_t_kappa(y).laplacian
     
     def dt_x_t_dt_y_t_kappa(self,x_t,y_t):
@@ -112,7 +112,7 @@ class GP(object):
         t_y = y_t[0,jnp.newaxis]
         y = y_t[1:]
         dt_x_t_kappa_y_t = lambda y: self.dt_x_t_kappa(x_t, jnp.concatenate((y,t_y))) # Compute kernel with x only
-        dt_x_t_laplacian_y_t_kappa = self.laplacian_op(dt_x_t_kappa_y_t)
+        dt_x_t_laplacian_y_t_kappa = self.laplacian_op(dt_x_t_kappa_y_t,0.6)
         return dt_x_t_laplacian_y_t_kappa(y).laplacian
     
     def div_x_dt_y_t_kappa(self,x_t,y_t):
@@ -134,7 +134,7 @@ class GP(object):
         t_y = y_t[0,jnp.newaxis]
         y = y_t[1:]
         div_x_kappa_y_t = lambda y: self.div_x_kappa(x_t, jnp.concatenate((y,t_y))) # Compute kernel with x only
-        div_x_laplacian_y_t_kappa = self.laplacian_op(div_x_kappa_y_t)
+        div_x_laplacian_y_t_kappa = self.laplacian_op(div_x_kappa_y_t,0.6)
         return div_x_laplacian_y_t_kappa(y).laplacian
     
     def laplacian_x_t_dt_y_t_kappa(self,x_t,y_t):
@@ -144,7 +144,7 @@ class GP(object):
         t_x = x_t[0,jnp.newaxis]
         x = x_t[1:]
         dt_y_t_kappa = lambda x: self.dt_y_t_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
-        laplacian_x_t_dt_y_t_kappa = self.laplacian_op(dt_y_t_kappa)
+        laplacian_x_t_dt_y_t_kappa = self.laplacian_op(dt_y_t_kappa,0.6)
         return laplacian_x_t_dt_y_t_kappa(x).laplacian
     
     def laplacian_x_t_div_y_kappa(self,x_t,y_t):
@@ -154,7 +154,7 @@ class GP(object):
         t_x = x_t[0,jnp.newaxis]
         x = x_t[1:]
         div_y_kappa = lambda x: self.div_y_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
-        laplacian_x_t_div_y_kappa = self.laplacian_op(div_y_kappa)
+        laplacian_x_t_div_y_kappa = self.laplacian_op(div_y_kappa,0.6)
         return laplacian_x_t_div_y_kappa(x).laplacian
     
     def laplacian_x_t_laplacian_y_t_kappa(self,x_t,y_t):
@@ -164,7 +164,7 @@ class GP(object):
         t_x = x_t[0,jnp.newaxis]
         x = x_t[1:]
         laplacian_y_t_kappa = lambda x: self.laplacian_y_t_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
-        laplacian_x_t_laplacian_y_t_kappa = self.laplacian_op(laplacian_y_t_kappa)
+        laplacian_x_t_laplacian_y_t_kappa = self.laplacian_op(laplacian_y_t_kappa,0.6)
         return laplacian_x_t_laplacian_y_t_kappa(x).laplacian
     
     
