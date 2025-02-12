@@ -396,8 +396,8 @@ class Grad_Dependent_Nonlinear(Equation):
         - data (tuple): A tuple containing domain points and boundary points.
         '''
         geom = self.geometry()  # Defines the geometry of the domain.
-        data1 = geom.random_points(num_domain)  # Generates random points in the domain.
-        data2 = geom.random_boundary_points(num_boundary)  # Generates random points on the boundary.
+        data1 = geom.random_points(num_domain).astype(jnp.float8_e5m2)  # Generates random points in the domain.
+        data2 = geom.random_boundary_points(num_boundary).astype(jnp.float8_e5m2)  # Generates random points on the boundary.
         return data1, data2
 
     def generate_test_data(self, num_domain=100, num_boundary=20):
@@ -412,8 +412,8 @@ class Grad_Dependent_Nonlinear(Equation):
         - data (tuple): A tuple containing domain points and boundary points.
         '''
         geom = self.test_geometry()  # Defines the geometry of the domain.
-        data1 = geom.random_points(num_domain)  # Generates random points in the domain.
-        data2 = geom.random_boundary_points(num_boundary)  # Generates random points on the boundary.
+        data1 = geom.random_points(num_domain).astype(jnp.float8_e5m2)  # Generates random points in the domain.
+        data2 = geom.random_boundary_points(num_boundary).astype(jnp.float8_e5m2)  # Generates random points on the boundary.
         return data1, data2
     
 class Linear_HJB(Equation):
