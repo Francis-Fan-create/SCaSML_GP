@@ -87,7 +87,7 @@ class SimpleUniform(object):
         data_domain_test, data_boundary_test = eq.generate_test_data(num_domain, num_boundary)
         data_test = np.concatenate((data_domain_test, data_boundary_test), axis=0)
         xt_test = data_test[:, :self.dim + 1]
-        exact_sol = eq.exact_solution(xt_test)
+        exact_sol = eq.exact_solution(xt_test).astype(np.float64)
     
         errors1 = np.zeros(num_domain)
         errors2 = np.zeros(num_domain)
@@ -101,19 +101,19 @@ class SimpleUniform(object):
         # Measure the time and predict using solver1
         print("Predicting with solver1 on test data...")
         start = time.time()
-        sol1 = self.solver1.predict(xt_test)
+        sol1 = self.solver1.predict(xt_test).astype(np.float64)
         time1 += time.time() - start
     
         # Measure the time and predict using solver2
         print("Predicting with solver2 on test data...")
         start = time.time()
-        sol2 = self.solver2.u_solve(n, rhomax, data_test)
+        sol2 = self.solver2.u_solve(n, rhomax, data_test).astype(np.float64)
         time2 += time.time() - start
     
         # Measure the time and predict using solver3
         print("Predicting with solver3 on test data...")
         start = time.time()
-        sol3 = self.solver3.u_solve(n, rhomax, data_test)
+        sol3 = self.solver3.u_solve(n, rhomax, data_test).astype(np.float64)
         time3 += time.time() - start
 
         # Compute the average error and relative error
@@ -198,7 +198,7 @@ class SimpleUniform(object):
         # Configure axes
         ax1.set_yscale('log')
         # Set y-axis limits manually
-        ax1.set_ylim(1e-6, 10)  # Ensure all data is visible
+        ax1.set_ylim(1e-8, 10)  # Ensure all data is visible
         ax1.set_ylabel('Absolute Error', labelpad=2)
         ax1.set_xticks([1, 2, 3])
         ax1.set_xticklabels(['GP', 'MLP', 'SCaSML'], rotation=45, ha='right')
