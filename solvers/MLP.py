@@ -267,7 +267,7 @@ class MLP:
                     z -= wloc[:, k, q - 1][:, jnp.newaxis] * jnp.sum(y * W, axis=1) / (MC * delta_t)  # Adjust z values
         output_cated = jnp.concatenate((u, z), axis=-1)  # Concatenate adjusted u and z values, shape (batch_size, dim + 1)
         norm_estimation = self.equation.norm_estimation
-        return jnp.clip(output_cated, -norm_estimation, norm_estimation)  # Clip the output to avoid numerical instability
+        return jnp.clip(output_cated, -norm_estimation, norm_estimation).astype(jnp.float16)  # Clip the output to avoid numerical instability
 
     def u_solve(self, n, rho, x_t):
         '''

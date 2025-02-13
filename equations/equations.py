@@ -258,7 +258,7 @@ class Grad_Dependent_Nonlinear(Equation):
         '''
         result = 1 - 1 / (1 + jnp.exp(x_t[:, -1] + jnp.sum(x_t[:, :self.n_input-1], axis=1)))
         result = result[:, jnp.newaxis]  # Convert to 2D
-        return result 
+        return result.astype(jnp.float16)
     
     def mu(self, x_t=0):
         '''
@@ -301,7 +301,7 @@ class Grad_Dependent_Nonlinear(Equation):
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
         result = self.sigma() * u * jnp.sum(z, axis=1, keepdims=True)
-        return result
+        return result.astype(jnp.float16)
     
     @partial(jit,static_argnames=["self"])
     def exact_solution(self, x_t):
@@ -320,7 +320,7 @@ class Grad_Dependent_Nonlinear(Equation):
         exp_term = jnp.exp(t + sum_x)  # Computes the exponential term of the solution.
         result = 1 - 1 / (1 + exp_term)  # Computes the exact solution.
         result = result[:, jnp.newaxis]  # Convert to 2D
-        return result
+        return result.astype(jnp.float16)
     
     @partial(jit,static_argnames=["self"])
     def exact_solution_derivative(self, x_t):
@@ -339,7 +339,7 @@ class Grad_Dependent_Nonlinear(Equation):
         exp_term = jnp.exp(t + sum_x)  # Computes the exponential term of the solution.
         result = exp_term / (1 + exp_term)**2  # Computes the exact solution derivative.
         result = result[:, jnp.newaxis]  # Convert to 2D
-        return result
+        return result.astype(jnp.float16)
     
     def geometry(self, t0=0, T=0.5):
         '''
@@ -447,7 +447,7 @@ class Linear_HJB(Equation):
         sum_x = jnp.sum(x, axis=1)  # Computes the sum of spatial coordinates.
         result = sum_x  # Computes the terminal constraint.
         result = result[:, jnp.newaxis]  # Convert to 2D
-        return result 
+        return result.astype(jnp.float16) 
     
     def mu(self, x_t=0):
         '''
@@ -505,7 +505,7 @@ class Linear_HJB(Equation):
         sum_x = jnp.sum(x, axis=1)
         result = sum_x + (self.T - t)
         result = result[:, jnp.newaxis]  # Convert to 2D
-        return result
+        return result.astype(jnp.float16)
     
     @partial(jit,static_argnames=["self"])
     def exact_solution_derivative(self, x_t):
@@ -519,7 +519,7 @@ class Linear_HJB(Equation):
         - result (ndarray): An array of shape (batch_size, n_input-1), representing the exact solution derivative.
         '''
         result = jnp.ones((x_t.shape[0], self.n_input - 1))
-        return result
+        return result.astype(jnp.float16)
     
     def geometry(self, t0=0, T=0.5):
         '''

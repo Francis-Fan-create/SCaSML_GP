@@ -29,49 +29,49 @@ class GP(object):
     
     def kappa(self,x_t,y_t):
         '''Compute the kernel entry K(x_t,y_t) for single vector x_t and y_t'''
-        return jnp.exp(-jnp.sum((x_t-y_t)**2)/(2*self.sigma**2))  # Gaussian kernel
+        return jnp.exp(-jnp.sum((x_t-y_t)**2)/(2*self.sigma**2)).astype(jnp.float16)  # Gaussian kernel
     
     def kappa_kernel(self,x_t,y_t):
         '''Compute the kernel matrix K(x_t,y_t) for batched vectors x_t and y_t'''
         N_x = x_t.shape[0]
         N_y = y_t.shape[0]
-        kernel = jnp.zeros((N_x,N_y))
+        kernel = jnp.zeros((N_x,N_y),dtype=jnp.float16)
         for i in range(N_x):
             for j in range(N_y):
                 kernel = kernel.at[i,j].set(self.kappa(x_t[i], y_t[j]))
-        return kernel
+        return kernel.astype(jnp.float16)
     
     def dx_t_kappa(self,x_t,y_t):
         '''Compute gradient of the kernel matrix K(x_t,y_t) with respect to x_t'''
-        return grad(self.kappa,argnums=0)(x_t,y_t)
+        return grad(self.kappa,argnums=0)(x_t,y_t).astype(jnp.float16) 
     
     def dt_x_t_kappa(self,x_t,y_t):
         '''Compute time derivative of the kernel matrix K(x_t,y_t) with respect to x_t'''
         dx_t_kappa = self.dx_t_kappa(x_t,y_t)
         dt_x_t_kappa = dx_t_kappa[-1]
-        return dt_x_t_kappa
+        return dt_x_t_kappa.astype(jnp.float16)
     
     def dy_t_kappa(self,x_t,y_t):
         '''Compute gradient of the kernel matrix K(x_t,y_t) with respect to y_t'''
-        return grad(self.kappa,argnums=1)(x_t,y_t)
+        return grad(self.kappa,argnums=1)(x_t,y_t).astype(jnp.float16) 
     
     def dt_y_t_kappa(self,x_t,y_t):
         '''Compute time derivative of the kernel matrix K(x_t,y_t) with respect to y_t'''
         dy_t_kappa = self.dy_t_kappa(x_t,y_t)
         dt_y_t_kappa = dy_t_kappa[-1]
-        return dt_y_t_kappa
+        return dt_y_t_kappa.astype(jnp.float16)
     
     def div_x_kappa(self,x_t,y_t):
         '''Compute divergence of the kernel matrix K(x_t,y_t) with respect to x_t'''
         dx_t_kappa = self.dx_t_kappa(x_t,y_t)
         div_x_kappa = jnp.sum(dx_t_kappa[:-1],axis=0)
-        return div_x_kappa
+        return div_x_kappa.astype(jnp.float16)
     
     def div_y_kappa(self,x_t,y_t):
         '''Compute divergence of the kernel matrix K(x_t,y_t) with respect to y_t'''
         dy_t_kappa = self.dy_t_kappa(x_t,y_t)
         div_y_kappa = jnp.sum(dy_t_kappa[:-1],axis=0)
-        return div_y_kappa
+        return div_y_kappa.astype(jnp.float16)
     
     def laplacian_x_t_kappa(self,x_t,y_t):
         '''Compute Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t'''
@@ -81,7 +81,7 @@ class GP(object):
         x = x_t[1:]
         kappa_x_t = lambda x: self.kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
         laplacian_x_t_kappa = self.laplacian_op(kappa_x_t,0.6)
-        return laplacian_x_t_kappa(x).laplacian
+        return laplacian_x_t_kappa(x).laplacian.astype(jnp.float16) 
     
     def laplacian_y_t_kappa(self,x_t,y_t):
         '''Compute Laplacian of the kernel matrix K(x_t,y_t) with respect to y_t'''
@@ -91,19 +91,19 @@ class GP(object):
         y = y_t[1:]
         kappa_y_t = lambda y: self.kappa(x_t,jnp.concatenate((y,t_y))) # Compute kernel with y only
         laplacian_y_t_kappa = self.laplacian_op(kappa_y_t,0.6)
-        return laplacian_y_t_kappa(y).laplacian
+        return laplacian_y_t_kappa(y).laplacian.astype(jnp.float16) 
     
     def dt_x_t_dt_y_t_kappa(self,x_t,y_t):
         '''Compute second time derivative of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
-        dt_x_t_dy_t_kappa = grad(self.dt_x_t_kappa,argnums=1)(x_t,y_t)
+        dt_x_t_dy_t_kappa = grad(self.dt_x_t_kappa,argnums=1)(x_t,y_t).astype(jnp.float16) 
         dt_x_t_dt_y_t_kappa = dt_x_t_dy_t_kappa[-1]
-        return dt_x_t_dt_y_t_kappa
+        return dt_x_t_dt_y_t_kappa.astype(jnp.float16)
     
     def dt_x_t_div_y_kappa(self,x_t,y_t):
         '''Compute time derivative of the divergence of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
-        dt_x_t_dy_t_kappa = grad(self.dt_x_t_kappa,argnums=1)(x_t,y_t)
+        dt_x_t_dy_t_kappa = grad(self.dt_x_t_kappa,argnums=1)(x_t,y_t).astype(jnp.float16) 
         dt_x_t_div_y_kappa = jnp.sum(dt_x_t_dy_t_kappa[:-1],axis=0)
-        return dt_x_t_div_y_kappa
+        return dt_x_t_div_y_kappa.astype(jnp.float16)
     
     def dt_x_t_laplacian_y_t_kappa(self,x_t,y_t):
         '''Compute time derivative of the Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
@@ -113,19 +113,19 @@ class GP(object):
         y = y_t[1:]
         dt_x_t_kappa_y_t = lambda y: self.dt_x_t_kappa(x_t, jnp.concatenate((y,t_y))) # Compute kernel with x only
         dt_x_t_laplacian_y_t_kappa = self.laplacian_op(dt_x_t_kappa_y_t,0.6)
-        return dt_x_t_laplacian_y_t_kappa(y).laplacian
+        return dt_x_t_laplacian_y_t_kappa(y).laplacian.astype(jnp.float16) 
     
     def div_x_dt_y_t_kappa(self,x_t,y_t):
         '''Compute divergence of the kernel matrix K(x_t,y_t) with respect to x_t'''
-        div_x_dy_t_kappa = grad(self.div_x_kappa,argnums=1)(x_t,y_t)
+        div_x_dy_t_kappa = grad(self.div_x_kappa,argnums=1)(x_t,y_t).astype(jnp.float16) 
         div_x_dt_y_t_kappa = div_x_dy_t_kappa[-1]
-        return div_x_dt_y_t_kappa
+        return div_x_dt_y_t_kappa.astype(jnp.float16)
     
     def div_x_div_y_kappa(self,x_t,y_t):
         '''Compute divergence of the divergence of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
-        div_x_dy_t_kappa = grad(self.div_x_kappa,argnums=1)(x_t,y_t)
+        div_x_dy_t_kappa = grad(self.div_x_kappa,argnums=1)(x_t,y_t).astype(jnp.float16) 
         div_x_div_y_kappa = jnp.sum(div_x_dy_t_kappa[:-1],axis=0)
-        return div_x_div_y_kappa
+        return div_x_div_y_kappa.astype(jnp.float16)
     
     def div_x_laplacian_y_t_kappa(self,x_t,y_t):
         '''Compute divergence of the Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
@@ -135,7 +135,7 @@ class GP(object):
         y = y_t[1:]
         div_x_kappa_y_t = lambda y: self.div_x_kappa(x_t, jnp.concatenate((y,t_y))) # Compute kernel with x only
         div_x_laplacian_y_t_kappa = self.laplacian_op(div_x_kappa_y_t,0.6)
-        return div_x_laplacian_y_t_kappa(y).laplacian
+        return div_x_laplacian_y_t_kappa(y).laplacian.astype(jnp.float16) 
     
     def laplacian_x_t_dt_y_t_kappa(self,x_t,y_t):
         '''Compute time derivative of the Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
@@ -145,7 +145,7 @@ class GP(object):
         x = x_t[1:]
         dt_y_t_kappa = lambda x: self.dt_y_t_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
         laplacian_x_t_dt_y_t_kappa = self.laplacian_op(dt_y_t_kappa,0.6)
-        return laplacian_x_t_dt_y_t_kappa(x).laplacian
+        return laplacian_x_t_dt_y_t_kappa(x).laplacian.astype(jnp.float16) 
     
     def laplacian_x_t_div_y_kappa(self,x_t,y_t):
         '''Compute Laplacian of the divergence of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
@@ -155,7 +155,7 @@ class GP(object):
         x = x_t[1:]
         div_y_kappa = lambda x: self.div_y_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
         laplacian_x_t_div_y_kappa = self.laplacian_op(div_y_kappa,0.6)
-        return laplacian_x_t_div_y_kappa(x).laplacian
+        return laplacian_x_t_div_y_kappa(x).laplacian.astype(jnp.float16) 
     
     def laplacian_x_t_laplacian_y_t_kappa(self,x_t,y_t):
         '''Compute Laplacian of the Laplacian of the kernel matrix K(x_t,y_t) with respect to x_t then y_t'''
@@ -165,7 +165,7 @@ class GP(object):
         x = x_t[1:]
         laplacian_y_t_kappa = lambda x: self.laplacian_y_t_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
         laplacian_x_t_laplacian_y_t_kappa = self.laplacian_op(laplacian_y_t_kappa,0.6)
-        return laplacian_x_t_laplacian_y_t_kappa(x).laplacian
+        return laplacian_x_t_laplacian_y_t_kappa(x).laplacian.astype(jnp.float16) 
     
     
     def kernel_phi_phi(self, x_t_domain, x_t_boundary):
@@ -254,7 +254,7 @@ class GP(object):
             raise ValueError("Cholesky decomposition resulted in NaN values.")
         self.cholesky_phi_phi_perturb = cholesky_phi_phi_perturb.astype(jnp.float16)    
         kernel_phi_phi_perturb = cholesky_phi_phi_perturb @ cholesky_phi_phi_perturb.T
-        return kernel_phi_phi_perturb
+        return kernel_phi_phi_perturb.astype(jnp.float16)
     
     
     def kernel_x_t_phi(self, x_t_infer, x_t_domain, x_t_boundary):
@@ -279,7 +279,7 @@ class GP(object):
         # Concatenate blocks horizontally to form the full matrix
         kernel_x_phi = jnp.hstack([K1, K2, K3, K4, K5])  # Shape: (N_infer, col_dim)
     
-        return kernel_x_phi
+        return kernel_x_phi.astype(jnp.float16)
     
     
     def dx_t_kernel_x_t_phi(self, x_t_infer, x_t_domain, x_t_boundary):
@@ -309,7 +309,7 @@ class GP(object):
         # Concatenate blocks horizontally
         dx_t_kernel_x_phi = jnp.concatenate([G1, G2, G3, G4, G5], axis=1)  # Shape: (N_infer, col_dim, n_input)
 
-        return dx_t_kernel_x_phi
+        return dx_t_kernel_x_phi.astype(jnp.float16)
 
 
     def laplacian_x_t_kernel_x_t_phi(self, x_t_infer, x_t_domain, x_t_boundary):
@@ -339,7 +339,7 @@ class GP(object):
         # Concatenate blocks horizontally to form the full matrix
         laplacian_x_t_kernel_x_phi = jnp.hstack([K1, K2, K3, K4, K5])  # Shape: (N_infer, col_dim)
 
-        return laplacian_x_t_kernel_x_phi
+        return laplacian_x_t_kernel_x_phi.astype(jnp.float16)
 
 
     def dt_x_t_kernel_x_t_phi(self, x_t_infer, x_t_domain, x_t_boundary):
@@ -368,7 +368,7 @@ class GP(object):
         # Concatenate blocks horizontally
         dt_x_t_kernel_x_phi = jnp.hstack([K1, K2, K3, K4, K5])  # Shape: (N_infer, col_dim)
 
-        return dt_x_t_kernel_x_phi
+        return dt_x_t_kernel_x_phi.astype(jnp.float16)
 
 
     def div_x_t_kernel_x_t_phi(self, x_t_infer, x_t_domain, x_t_boundary):
@@ -397,7 +397,7 @@ class GP(object):
         # Concatenate blocks horizontally
         div_x_t_kernel_x_phi = jnp.hstack([K1, K2, K3, K4, K5])  # Shape: (N_infer, col_dim)
 
-        return div_x_t_kernel_x_phi
+        return div_x_t_kernel_x_phi.astype(jnp.float16)
     
     def rhs_f(self, x_t_domain):
         '''Compute the right-hand side f at x_t_domain'''
@@ -430,7 +430,7 @@ class GP(object):
         # Compute the loss without using .item()
         loss = jnp.dot(half_vector, half_vector)  # Scalar value
         
-        return loss  # Return as a JAX scalar
+        return loss.astype(jnp.float16)  # Return as a JAX scalar
     
     # def Hessian_GN(self, sol, rhs_f, bdy_g, L):
     #     '''Compute the Hessian of the loss function for the Gaussian process'''
@@ -611,7 +611,7 @@ class GP(object):
             div_kappa
         ])  # Shape: (col_dim,)
     
-        return phi_x
+        return phi_x.astype(jnp.float16)
     
     def predict(self, x_t_infer):
         '''Predict the solution at x_t_infer using a scalar function'''
@@ -623,7 +623,7 @@ class GP(object):
             kernel_values = self.kernel_x_t_phi_single(x_t)  # Shape: (col_dim,)
             # Compute the scalar prediction
             sol = jnp.dot(kernel_values, right_vector)
-            return sol
+            return sol.astype(jnp.float16)
     
         # Vectorize the solution function over x_t_infer
         solution_function_vectorized = jit(vmap(solution_function))
@@ -631,7 +631,7 @@ class GP(object):
         # Compute the predictions
         sol_infer = solution_function_vectorized(x_t_infer)  # Shape: (N_infer,)
     
-        return sol_infer[:,jnp.newaxis]
+        return sol_infer[:,jnp.newaxis].astype(jnp.float16)
     
     def compute_gradient(self, x_t_infer, sol_infer):
         '''Compute the gradient of the solution at x_t_infer without large intermediate arrays'''
@@ -647,7 +647,7 @@ class GP(object):
         gradient_function = jit(vmap(grad(solution_function)))
         gradient = gradient_function(x_t_infer)  # Shape: (N_infer, n_input)
     
-        return gradient
+        return gradient.astype(jnp.float16)
     
     def compute_PDE_loss(self,x_t_infer):
         '''Compute the PDE loss at x_t_infer'''
@@ -675,7 +675,7 @@ class GP_Linear_HJB(GP):
         z_5 = sol[2*N_domain:]
 
         rep_domain = (1 / d) * z_5 - z_3 + rhs_f
-        return rep_domain
+        return rep_domain.astype(jnp.float16)
 
     
     def DF_domain_without_time(self, sol):
@@ -693,7 +693,7 @@ class GP_Linear_HJB(GP):
             (1 / d) * I_nd
         ])
  
-        return DF_domain_without_time
+        return DF_domain_without_time.astype(jnp.float16)
 
     
     def compute_PDE_loss(self, x_t_infer):
@@ -713,7 +713,7 @@ class GP_Linear_HJB(GP):
         laplacian_x_t_sol = laplacian_x_t_sol_kernel @ right_vector
 
         loss = dt_x_t_sol - (1 / d) * div_x_sol + laplacian_x_t_sol + 2
-        return loss
+        return loss.astype(jnp.float16)
 
 class GP_Grad_Dependent_Nonlinear(GP):
     '''Gaussian Kernel Solver for the Grad_Dependent_Nonlinear'''
@@ -741,7 +741,7 @@ class GP_Grad_Dependent_Nonlinear(GP):
         # Compute F components
         F_domain =  -sigma**2 * z_1 * z_5 + (1 / d + sigma**2 / 2) * z_5 - (sigma**2 / 2) * z_3 + rhs_f
 
-        return F_domain
+        return F_domain.astype(jnp.float16)
 
     
     def DF_domain_without_time(self, sol):
@@ -765,7 +765,7 @@ class GP_Grad_Dependent_Nonlinear(GP):
         DF_domain_without_time = jnp.hstack([-DF_z1, -DF_z3, -DF_z5])
 
 
-        return DF_domain_without_time
+        return DF_domain_without_time.astype(jnp.float16)
 
     
     def compute_PDE_loss(self, x_t_infer):
@@ -791,7 +791,7 @@ class GP_Grad_Dependent_Nonlinear(GP):
         # Compute PDE loss
         loss = dt_x_sol + (sigma**2 * sol - (1 / d) - (sigma**2 / 2)) * div_x_sol \
             + (sigma**2 / 2) * laplacian_x_sol
-        return loss
+        return loss.astype(jnp.float16)
 
 
 
