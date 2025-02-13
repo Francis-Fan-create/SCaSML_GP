@@ -197,6 +197,8 @@ class SimpleUniform(object):
         
         # Configure axes
         ax1.set_yscale('log')
+        # Set y-axis limits manually
+        ax1.set_ylim(1e-6, 10)  # Ensure all data is visible
         ax1.set_ylabel('Absolute Error', labelpad=2)
         ax1.set_xticks([1, 2, 3])
         ax1.set_xticklabels(['GP', 'MLP', 'SCaSML'], rotation=45, ha='right')
@@ -359,7 +361,7 @@ class SimpleUniform(object):
         # =============================================
         def plot_spatio_temp_error(data, label, filename):
             fig, ax = plt.subplots(figsize=(5, 4))
-            norm = LogNorm(vmin=1e-6, vmax=np.max([errors1.max(), errors2.max(), errors3.max()]))
+            norm = LogNorm(vmin=1e-4, vmax=10)
             
             # Create heatmap
             im = ax.pcolormesh(x1_bins, x2_bins, data, cmap='viridis', norm=norm, shading='auto')
