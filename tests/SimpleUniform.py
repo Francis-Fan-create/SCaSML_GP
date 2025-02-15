@@ -198,7 +198,7 @@ class SimpleUniform(object):
         # Configure axes
         ax1.set_yscale('log')
         # Set y-axis limits manually
-        ax1.set_ylim(1e-8, 10)  # Ensure all data is visible
+        ax1.set_ylim(1e-5, 10)  # Ensure all data is visible
         ax1.set_ylabel('Absolute Error', labelpad=2)
         ax1.set_xticks([1, 2, 3])
         ax1.set_xticklabels(['GP', 'MLP', 'SCaSML'], rotation=45, ha='right')

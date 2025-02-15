@@ -1,6 +1,6 @@
 #!/bin/bash
 # How to use in bash: 1. chmod +x low_dim_group.sh 2. ./low_dim_group.sh
-#device: GPU 160G
+#device: vGPU 32G
 
 # Group 1
 echo "Running Group 1"

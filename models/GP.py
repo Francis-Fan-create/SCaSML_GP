@@ -1,6 +1,6 @@
 import numpy as np
 import jax.numpy as jnp
-from jax import grad, vmap, hessian, jit, random, lax, value_and_grad
+from jax import grad, vmap, hessian, jit, random, lax, value_and_grad, jvp
 import jax.ops as jop
 import optax
 
@@ -25,17 +25,17 @@ class GP(object):
         self.sigma= equation.sigma()*jnp.sqrt(self.d) # Standard deviation for Gaussian kernel
         self.nugget = 1e-2  # Regularization parameter to ensure numerical stability
 
-    def laplacian_op(self, f, h):
-        '''Compute the Laplacian of a function f using finite difference'''
+    def laplacian_op(self, f):
+        '''Compute the Laplacian of a function f using Hutchinson's method'''
+        MC = 5
+        def hvp(f, x, i):
+            call_jei = lambda x:jit(grad(f))(x)[i]
+            return jit(grad(call_jei))(x)
         def laplacian(x):
-            N = x.shape[0]
-            lap = jnp.zeros(N)
-            for i in range(N):
-                x_i = x[i]
-                x_left = jnp.concatenate([x[:i], x_i-h*jnp.eye(self.d), x[i+1:]])
-                x_right = jnp.concatenate([x[:i], x_i+h*jnp.eye(self.d), x[i+1:]])
-                lap = lap.at[i].set(jnp.sum(f(x_right)) - 2*jnp.sum(f(x)) + jnp.sum(f(x_left))/h**2)
-            return lap/h**2
+            idx_set = random.choice(random.PRNGKey(0), self.d, shape=(MC,), replace=False)
+            f_hess_diag_fn = lambda i: hvp(f, x, i)[i]
+            hess_diag_val = jit(vmap(f_hess_diag_fn))(idx_set)
+            return jnp.mean(hess_diag_val)*self.d
         return laplacian
     
     def kappa(self,x_t,y_t):
@@ -91,7 +91,7 @@ class GP(object):
         t_x = x_t[0,jnp.newaxis]
         x = x_t[1:]
         kappa_x_t = lambda x: self.kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
-        laplacian_x_t_kappa = self.laplacian_op(kappa_x_t,1e-3)
+        laplacian_x_t_kappa = self.laplacian_op(kappa_x_t)
         return laplacian_x_t_kappa(x).astype(jnp.float16) 
     
     def laplacian_y_t_kappa(self,x_t,y_t):
@@ -101,7 +101,7 @@ class GP(object):
         t_y = y_t[0,jnp.newaxis]
         y = y_t[1:]
         kappa_y_t = lambda y: self.kappa(x_t,jnp.concatenate((y,t_y))) # Compute kernel with y only
-        laplacian_y_t_kappa = self.laplacian_op(kappa_y_t,1e-3)
+        laplacian_y_t_kappa = self.laplacian_op(kappa_y_t)
         return laplacian_y_t_kappa(y).astype(jnp.float16) 
     
     def dt_x_t_dt_y_t_kappa(self,x_t,y_t):
@@ -123,7 +123,7 @@ class GP(object):
         t_y = y_t[0,jnp.newaxis]
         y = y_t[1:]
         dt_x_t_kappa_y_t = lambda y: self.dt_x_t_kappa(x_t, jnp.concatenate((y,t_y))) # Compute kernel with x only
-        dt_x_t_laplacian_y_t_kappa = self.laplacian_op(dt_x_t_kappa_y_t,1e-3)
+        dt_x_t_laplacian_y_t_kappa = self.laplacian_op(dt_x_t_kappa_y_t)
         return dt_x_t_laplacian_y_t_kappa(y).astype(jnp.float16) 
     
     def div_x_dt_y_t_kappa(self,x_t,y_t):
@@ -145,7 +145,7 @@ class GP(object):
         t_y = y_t[0,jnp.newaxis]
         y = y_t[1:]
         div_x_kappa_y_t = lambda y: self.div_x_kappa(x_t, jnp.concatenate((y,t_y))) # Compute kernel with x only
-        div_x_laplacian_y_t_kappa = self.laplacian_op(div_x_kappa_y_t,1e-3)
+        div_x_laplacian_y_t_kappa = self.laplacian_op(div_x_kappa_y_t)
         return div_x_laplacian_y_t_kappa(y).astype(jnp.float16) 
     
     def laplacian_x_t_dt_y_t_kappa(self,x_t,y_t):
@@ -155,7 +155,7 @@ class GP(object):
         t_x = x_t[0,jnp.newaxis]
         x = x_t[1:]
         dt_y_t_kappa = lambda x: self.dt_y_t_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
-        laplacian_x_t_dt_y_t_kappa = self.laplacian_op(dt_y_t_kappa,1e-3)
+        laplacian_x_t_dt_y_t_kappa = self.laplacian_op(dt_y_t_kappa)
         return laplacian_x_t_dt_y_t_kappa(x).astype(jnp.float16) 
     
     def laplacian_x_t_div_y_kappa(self,x_t,y_t):
@@ -165,7 +165,7 @@ class GP(object):
         t_x = x_t[0,jnp.newaxis]
         x = x_t[1:]
         div_y_kappa = lambda x: self.div_y_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
-        laplacian_x_t_div_y_kappa = self.laplacian_op(div_y_kappa,1e-3)
+        laplacian_x_t_div_y_kappa = self.laplacian_op(div_y_kappa)
         return laplacian_x_t_div_y_kappa(x).astype(jnp.float16) 
     
     def laplacian_x_t_laplacian_y_t_kappa(self,x_t,y_t):
@@ -175,7 +175,7 @@ class GP(object):
         t_x = x_t[0,jnp.newaxis]
         x = x_t[1:]
         laplacian_y_t_kappa = lambda x: self.laplacian_y_t_kappa(jnp.concatenate((x,t_x)),y_t) # Compute kernel with x only
-        laplacian_x_t_laplacian_y_t_kappa = self.laplacian_op(laplacian_y_t_kappa,1e-3)
+        laplacian_x_t_laplacian_y_t_kappa = self.laplacian_op(laplacian_y_t_kappa)
         return laplacian_x_t_laplacian_y_t_kappa(x).astype(jnp.float16) 
     
     
