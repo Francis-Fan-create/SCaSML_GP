@@ -40,7 +40,7 @@ class MLP_full_history(object):
         '''
         # batch_size=x_t.shape[0]
         # self.evaluation_counter+=batch_size
-        # self.evaluation_counter+=1
+        self.evaluation_counter+=1
         eq = self.equation
         return eq.f(x_t, u, z)
     
@@ -56,7 +56,7 @@ class MLP_full_history(object):
         '''
         # batch_size=x_t.shape[0]
         # self.evaluation_counter+=batch_size
-        # self.evaluation_counter+=1
+        self.evaluation_counter+=1
         eq = self.equation
         return eq.g(x_t)[:,0]
     
@@ -98,7 +98,7 @@ class MLP_full_history(object):
         # Generate Monte Carlo samples for backward Euler
         std_normal = random.normal(subkey, shape=(batch_size, MC_g, dim))
         dW = jnp.sqrt(T-t)[:, np.newaxis, np.newaxis] * std_normal  # Brownian increments, shape (batch_size, MC_g, dim)
-        self.evaluation_counter+=MC_g
+        # self.evaluation_counter+=MC_g
         X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC_g, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC_g, dim)
         disturbed_X = X + mu*(T-t)[:, np.newaxis, np.newaxis]+ sigma * dW  # Disturbed spatial coordinates, shape (batch_size, MC_g, dim)
         
@@ -142,7 +142,7 @@ class MLP_full_history(object):
             simulated = jnp.zeros((batch_size, MC_f, dim + 1))  # Initialize array for simulated values, shape (batch_size, MC_f, dim + 1)
             std_normal = random.normal(subkey, shape=(batch_size, MC_f, dim))  # Generate standard normal samples
             dW =jnp.sqrt(sampled_time_steps) * std_normal  # Brownian increments for current time step, shape (batch_size, MC_f, dim)
-            self.evaluation_counter+=MC_f*dim
+            # self.evaluation_counter+=MC_f*dim
             X += mu*(sampled_time_steps)+sigma * dW  # Update spatial coordinates
             co_solver_l = lambda X_t: self.uz_solve(n=l, rho= None, x_t=X_t)  # Co-solver for level l
             co_solver_l_minus_1 = lambda X_t: self.uz_solve(n=l - 1, rho= None, x_t=X_t)  # Co-solver for level l - 1
