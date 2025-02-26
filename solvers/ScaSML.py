@@ -270,11 +270,11 @@ class ScaSML:
                     z -= wloc[:, k, q - 1][:, jnp.newaxis] * jnp.sum(y * W, axis=1) / (MC_f * delta_t)
                 else:
                     epsilon_flat = self.GP.compute_PDE_loss(input_intermediates_flat)
-                    epsilon = epsilon_flat.reshape(batch_size, MC, 1)
+                    epsilon = epsilon_flat.reshape(batch_size, MC_f, 1)
                     # Update u and z values
                     u += wloc[:, k, q - 1][:, jnp.newaxis] * jnp.mean(epsilon, axis=1)
                     delta_t = (cloc[:, k, q - 1] - t + 1e-6)[:, jnp.newaxis]
-                    z += wloc[:, k, q - 1][:, jnp.newaxis] * jnp.sum(epsilon * W, axis=1) / (MC * delta_t)  
+                    z += wloc[:, k, q - 1][:, jnp.newaxis] * jnp.sum(epsilon * W, axis=1) / (MC_f * delta_t)  
         output_uz = jnp.concatenate((u, z), axis=-1)
         uncertainty = self.equation.uncertainty
         # Clip output_uz to avoid large values

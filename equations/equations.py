@@ -430,7 +430,7 @@ class Linear_HJB(Equation):
         '''
         super().__init__(n_input, n_output)
         self.uncertainty = 1e-1
-        self.norm_estimation = 100
+        self.norm_estimation = 0.5 * self.n_input
     
     @partial(jit,static_argnames=["self"])
     def terminal_constraint(self, x_t):
