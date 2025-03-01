@@ -144,7 +144,7 @@ class InferenceScaling(object):
             rho = 1
             for j in range(list_len):
                     
-                    M = 20 + j*20
+                    M = 20 + j
 
                     # Print current exponetial base
                     print(f"Current base: {M}")
