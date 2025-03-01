@@ -103,60 +103,32 @@ class ConvergenceRate(object):
     
     
         for j in range(list_len):
-            if eq.__class__.__name__ == 'Grad_Dependent_Nonlinear':
-                print(f"Training solver1 with {train_sizes_domain[j]} domain points and {train_sizes_boundary[j]} boundary points...")
-                data_domain_train, data_boundary_train = eq.generate_data(train_sizes_domain[j], train_sizes_boundary[j])
-                # Train solver1 with fixed training sample size and varying GN_steps
-                self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
-            
-                # Predict with solver1
-                sol1 = self.solver1.predict(xt_values)
-            
-                # # Solve with solver2 (baseline solver)
-                # sol2 = self.solver2.u_solve(rhomax, rhomax, xt_values)
-            
-                # Solve with solver3 using the trained solver1
-                sol3 = self.solver3.u_solve(rhomax, rhomax, xt_values)
-            
-                # Compute errors
-                errors1 = np.abs(sol1 - exact_sol).flatten()
-                # errors2 = np.abs(sol2 - exact_sol).flatten()
-                errors3 = np.abs(sol3 - exact_sol).flatten()
-            
-                error_value1 = np.linalg.norm(errors1) / np.linalg.norm(exact_sol)
-                # error_value2 = np.linalg.norm(errors2) / np.linalg.norm(exact_sol)
-                error_value3 = np.linalg.norm(errors3) / np.linalg.norm(exact_sol)
+            print(f"Training solver1 with {train_sizes_domain[j]} domain points and {train_sizes_boundary[j]} boundary points...")
+            data_domain_train, data_boundary_train = eq.generate_data(train_sizes_domain[j], train_sizes_boundary[j])
+            # Train solver1 with fixed training sample size and varying GN_steps
+            self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
+        
+            # Predict with solver1
+            sol1 = self.solver1.predict(xt_values)
+        
+            # # Solve with solver2 (baseline solver)
+            # sol2 = self.solver2.u_solve(rhomax, rhomax, xt_values)
+        
+            # Solve with solver3 using the trained solver1
+            sol3 = self.solver3.u_solve(rhomax, rhomax, xt_values)
+        
+            # Compute errors
+            errors1 = np.abs(sol1 - exact_sol).flatten()
+            # errors2 = np.abs(sol2 - exact_sol).flatten()
+            errors3 = np.abs(sol3 - exact_sol).flatten()
+        
+            error_value1 = np.linalg.norm(errors1) / np.linalg.norm(exact_sol)
+            # error_value2 = np.linalg.norm(errors2) / np.linalg.norm(exact_sol)
+            error_value3 = np.linalg.norm(errors3) / np.linalg.norm(exact_sol)
 
-                error1_list.append(error_value1)
-                # error2_list.append(error_value2)
-                error3_list.append(error_value3)
-            elif eq.__class__.__name__ == 'Linear_HJB':
-                print(f"Training solver1 with {train_sizes_domain[j]} domain points and {train_sizes_boundary[j]} boundary points...")
-                data_domain_train, data_boundary_train = eq.generate_data(train_sizes_domain[j], train_sizes_boundary[j])
-                # Train solver1 with fixed training sample size and varying GN_steps
-                self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
-            
-                # Predict with solver1
-                sol1 = self.solver1.predict(xt_values)
-            
-                # # Solve with solver2 (baseline solver)
-                # sol2 = self.solver2.u_solve(1, 1, xt_values,50)
-            
-                # Solve with solver3 using the trained solver1
-                sol3 = self.solver3.u_solve(1, 1, xt_values,50)
-            
-                # Compute errors
-                errors1 = np.abs(sol1 - exact_sol).flatten()
-                # errors2 = np.abs(sol2 - exact_sol).flatten()
-                errors3 = np.abs(sol3 - exact_sol).flatten()
-            
-                error_value1 = np.linalg.norm(errors1) / np.linalg.norm(exact_sol)
-                # error_value2 = np.linalg.norm(errors2) / np.linalg.norm(exact_sol)
-                error_value3 = np.linalg.norm(errors3) / np.linalg.norm(exact_sol)
-
-                error1_list.append(error_value1)
-                # error2_list.append(error_value2)
-                error3_list.append(error_value3)
+            error1_list.append(error_value1)
+            # error2_list.append(error_value2)
+            error3_list.append(error_value3)
         
         # Plot error ratios
         plt.figure()

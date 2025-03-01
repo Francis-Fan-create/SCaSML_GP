@@ -61,7 +61,7 @@ class MLP_full_history(object):
         return eq.g(x_t)[:,0]
     
     # @log_variables
-    def uz_solve(self, n, rho, x_t, M=2):
+    def uz_solve(self, n, rho, x_t, M):
         '''
         Approximate the solution of the PDE, return the value of u(x_t) and z(x_t), batchwisely.
         
@@ -178,7 +178,7 @@ class MLP_full_history(object):
         norm_estimation = self.equation.norm_estimation
         return jnp.clip(output_cated, -norm_estimation, norm_estimation).astype(jnp.float16)  # Clip the output to avoid numerical instability
     
-    def u_solve(self, n, rho, x_t, M=2):
+    def u_solve(self, n, rho, x_t, M=10):
         '''
         Approximate the solution of the PDE, return the value of u(x_t), batchwisely.
         
