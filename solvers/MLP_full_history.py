@@ -40,7 +40,7 @@ class MLP_full_history(object):
         '''
         # batch_size=x_t.shape[0]
         # self.evaluation_counter+=batch_size
-        self.evaluation_counter+=1
+        # self.evaluation_counter+=1
         eq = self.equation
         return eq.f(x_t, u, z)
     
@@ -56,7 +56,7 @@ class MLP_full_history(object):
         '''
         # batch_size=x_t.shape[0]
         # self.evaluation_counter+=batch_size
-        self.evaluation_counter+=1
+        # self.evaluation_counter+=1
         eq = self.equation
         return eq.g(x_t)[:,0]
     
@@ -98,7 +98,6 @@ class MLP_full_history(object):
         # Generate Monte Carlo samples for backward Euler
         std_normal = random.normal(subkey, shape=(batch_size, MC_g, dim), dtype=jnp.float16)
         dW = jnp.sqrt(T-t)[:, jnp.newaxis, jnp.newaxis] * std_normal  # Brownian increments, shape (batch_size, MC_g, dim)
-        # self.evaluation_counter+=MC_g
         X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC_g, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC_g, dim)
         disturbed_X = X + mu*(T-t)[:, jnp.newaxis, jnp.newaxis]+ sigma * dW  # Disturbed spatial coordinates, shape (batch_size, MC_g, dim)
         
@@ -111,6 +110,7 @@ class MLP_full_history(object):
 
         # Vectorized evaluation of g
         distrubed_output_terminal_flat = g(disturbed_input_terminal_flat)  # Evaluate disturbed terminal condition, shape (batch_size * MC_g, 1)
+        self.evaluation_counter+=MC_g
 
         # Reshape back to (batch_size, MC_g, 1)
         distrubed_output_terminal =  distrubed_output_terminal_flat.reshape(batch_size, MC_g, 1)
@@ -150,6 +150,7 @@ class MLP_full_history(object):
             simulated_u_flat = simulated_u.reshape(-1, 1)
             simulated_z_flat = simulated_z.reshape(-1, dim)
             y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat)  # Apply generator term function, shape (batch_size * MC_f, 1)
+            self.evaluation_counter+=MC_f
             y = y_flat.reshape(batch_size, MC_f, 1)  # Reshape to shape (batch_size, MC_f, 1)
             # Update u and z values
             u += (T-t)[:,jnp.newaxis]* jnp.mean(y, axis=1)  # Update u values
@@ -167,6 +168,7 @@ class MLP_full_history(object):
                 simulated_u_flat = simulated_u.reshape(-1, 1)
                 simulated_z_flat = simulated_z.reshape(-1, dim)
                 y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat) # Apply generator term function, shape (batch_size * MC_f, 1)
+                self.evaluation_counter+=MC_f
                 y = y_flat.reshape(batch_size, MC_f, 1)  # Reshape to shape (batch_size, MC_f, 1)
                 # Update u and z values
                 u -= (T-t)[:,jnp.newaxis]* jnp.mean(y, axis=1)  # Update u values

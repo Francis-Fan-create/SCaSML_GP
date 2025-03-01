@@ -109,67 +109,68 @@ class InferenceScaling(object):
         # Train solver1 with fixed training sample size and varying GN_steps
         self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
     
-        for j in range(list_len):
+        if eq.__class__.__name__ == 'Grad_Dependent_Nonlinear':
+            for j in range(list_len):
 
-            if eq.__class__.__name__ == 'Grad_Dependent_Nonlinear':
+                    rho = j + 1
 
-                rho = j + 1
-
-                # Print current rho value
-                print(f"Current rho value: {rho}")
-            
-                # Predict with solver1
-                sol1 = self.solver1.predict(xt_values)
-            
-                # # Solve with solver2 (baseline solver)
-                sol2 = self.solver2.u_solve(rho, rho, xt_values)
-                # Solve with solver3 using the trained solver1
-                sol3 = self.solver3.u_solve(rho, rho, xt_values)
-            
-                # Compute errors
-                errors1 = np.linalg.norm(sol1 - exact_sol)
-                errors2 = np.linalg.norm(sol2 - exact_sol)
-                errors3 = np.linalg.norm(sol3 - exact_sol)
-            
-                error_value1 = errors1 / np.linalg.norm(exact_sol)
-                error_value2 = errors2 / np.linalg.norm(exact_sol)
-                error_value3 = errors3 / np.linalg.norm(exact_sol)
-
-                error1_list.append(error_value1)
-                error2_list.append(error_value2)
-                error3_list.append(error_value3)
-
-                eval_counter_list.append(self.solver3.evaluation_counter)
-            
-            elif eq.__class__.__name__ == 'Linear_HJB':
+                    # Print current rho value
+                    print(f"Current rho value: {rho}")
                 
-                rho = 1
-                M=int(2+j)
-                # Print current exponential sample base
-                print(f"Current base: {M}")
-            
-                # Predict with solver1
-                sol1 = self.solver1.predict(xt_values)
-            
-                # # Solve with solver2 (baseline solver)
-                sol2 = self.solver2.u_solve(rho, rho, xt_values, M)
-                # Solve with solver3 using the trained solver1
-                sol3 = self.solver3.u_solve(rho, rho, xt_values, M)
-            
-                # Compute errors
-                errors1 = np.linalg.norm(sol1 - exact_sol)
-                errors2 = np.linalg.norm(sol2 - exact_sol)
-                errors3 = np.linalg.norm(sol3 - exact_sol)
-            
-                error_value1 = errors1 / np.linalg.norm(exact_sol)
-                error_value2 = errors2 / np.linalg.norm(exact_sol)
-                error_value3 = errors3 / np.linalg.norm(exact_sol)
+                    # Predict with solver1
+                    sol1 = self.solver1.predict(xt_values)
+                
+                    # # Solve with solver2 (baseline solver)
+                    sol2 = self.solver2.u_solve(rho, rho, xt_values)
+                    # Solve with solver3 using the trained solver1
+                    sol3 = self.solver3.u_solve(rho, rho, xt_values)
+                
+                    # Compute errors
+                    errors1 = np.linalg.norm(sol1 - exact_sol)
+                    errors2 = np.linalg.norm(sol2 - exact_sol)
+                    errors3 = np.linalg.norm(sol3 - exact_sol)
+                
+                    error_value1 = errors1 / np.linalg.norm(exact_sol)
+                    error_value2 = errors2 / np.linalg.norm(exact_sol)
+                    error_value3 = errors3 / np.linalg.norm(exact_sol)
 
-                error1_list.append(error_value1)
-                error2_list.append(error_value2)
-                error3_list.append(error_value3)
+                    error1_list.append(error_value1)
+                    error2_list.append(error_value2)
+                    error3_list.append(error_value3)
 
-                eval_counter_list.append(self.solver3.evaluation_counter)
+                    eval_counter_list.append(self.solver3.evaluation_counter)
+        elif eq.__class__.__name__ == 'Linear_HJB':
+            list_len = 20*list_len
+            rho = 1
+            for j in range(list_len):
+                    
+                    M = 20 + j*20
+
+                    # Print current exponetial base
+                    print(f"Current base: {M}")
+                
+                    # Predict with solver1
+                    sol1 = self.solver1.predict(xt_values)
+                
+                    # # Solve with solver2 (baseline solver)
+                    sol2 = self.solver2.u_solve(rho, rho, xt_values,M)
+                    # Solve with solver3 using the trained solver1
+                    sol3 = self.solver3.u_solve(rho, rho, xt_values,M)
+                
+                    # Compute errors
+                    errors1 = np.linalg.norm(sol1 - exact_sol)
+                    errors2 = np.linalg.norm(sol2 - exact_sol)
+                    errors3 = np.linalg.norm(sol3 - exact_sol)
+                
+                    error_value1 = errors1 / np.linalg.norm(exact_sol)
+                    error_value2 = errors2 / np.linalg.norm(exact_sol)
+                    error_value3 = errors3 / np.linalg.norm(exact_sol)
+
+                    error1_list.append(error_value1)
+                    error2_list.append(error_value2)
+                    error3_list.append(error_value3)
+
+                    eval_counter_list.append(self.solver3.evaluation_counter)
         
         # Plot error ratios
         plt.figure()

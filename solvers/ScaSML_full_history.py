@@ -122,6 +122,7 @@ class ScaSML_full_history(object):
 
         # Vectorized evaluation of g
         distrubed_output_terminal_flat = g(disturbed_input_terminal_flat)  # Evaluate disturbed terminal condition, shape (batch_size * MC_g, 1)
+        self.evaluation_counter += MC_g
 
         # Reshape back to (batch_size, MC_g, 1)
         distrubed_output_terminal =  distrubed_output_terminal_flat.reshape(batch_size, MC_g, 1)
@@ -161,6 +162,7 @@ class ScaSML_full_history(object):
             simulated_u_flat = simulated_u.reshape(-1, 1)
             simulated_z_flat = simulated_z.reshape(-1, dim)
             y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat)  # Apply generator term function, shape (batch_size * MC_f, 1)
+            self.evaluation_counter += MC_g
             y = y_flat.reshape(batch_size, MC_f, 1)  # Reshape to shape (batch_size, MC_f, 1)
             # Update u and z values
             u += (T-t)[:,jnp.newaxis]* jnp.mean(y, axis=1)  # Update u values
@@ -178,13 +180,13 @@ class ScaSML_full_history(object):
                 simulated_u_flat = simulated_u.reshape(-1, 1)
                 simulated_z_flat = simulated_z.reshape(-1, dim)
                 y_flat = f(input_intermediates_flat, simulated_u_flat, simulated_z_flat) # Apply generator term function, shape (batch_size * MC_f, 1)
+                self.evaluation_counter += MC_g
                 y = y_flat.reshape(batch_size, MC_f, 1)  # Reshape to shape (batch_size, MC_f, 1)
                 # Update u and z values
                 u -= (T-t)[:,jnp.newaxis]* jnp.mean(y, axis=1)  # Update u values
                 delta_sqrt_t = jnp.sqrt(sampled_time_steps + 1e-6)  # Avoid division by zero, shape (batch_size, 1)
                 z -= (T-t)[:,jnp.newaxis] * jnp.mean((y * std_normal / (delta_sqrt_t)),axis=1)  # Update z values
             else:
-                u_hat = self.GP.predict(input_intermediates_flat)
                 epsilon_flat = self.GP.compute_PDE_loss(input_intermediates_flat)
                 epsilon = epsilon_flat.reshape(batch_size, MC_f, 1)
                 # Update u and z values
