@@ -4,14 +4,14 @@
 
 # Group 1
 echo "Running Group 1"
-python results/Grad_Dependent_Nonlinear/20d/experiment_run.py &
+# python results/Grad_Dependent_Nonlinear/20d/experiment_run.py &
 # python results/Linear_HJB/20d/experiment_run.py &
 wait
 echo "Group 1 completed."
 
 # Group 2
 echo "Running Group 2"
-python results/Grad_Dependent_Nonlinear/40d/experiment_run.py &
+# python results/Grad_Dependent_Nonlinear/40d/experiment_run.py &
 python results_full_history/Grad_Dependent_Nonlinear/20d/experiment_run.py &
 wait
 echo "Group 2 completed."
