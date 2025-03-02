@@ -9,7 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from equations.equations import Linear_Convection_Diffusion
 from tests.SimpleUniform import SimpleUniform
 from tests.ConvergenceRate import ConvergenceRate
-from tests.InferenceScaling import InferenceScaling
+from tests.SimpleScaling import SimpleScaling
 from solvers.MLP_full_history import MLP_full_history
 from solvers.ScaSML_full_history import ScaSML_full_history
 from models.GP import GP_Grad_Dependent_Nonlinear as GP
@@ -64,12 +64,9 @@ solver3_3=ScaSML_full_history(equation=equation,GP=solver1_3) #ScaSML object
 # #run the test for SimpleUniform
 # test2=SimpleUniform(equation,solver1_1,solver2,solver3_1)
 # test2.test(r"results_full_history/Linear_Convection_Diffusion/40d")
-# #run the test for ConvergenceRate
-# test3=ConvergenceRate(equation,solver1_2,solver2,solver3_2)
-# test3.test(r"results_full_history/Linear_Convection_Diffusion/40d")
-#run the test for InferenceScaling
-test4=InferenceScaling(equation,solver1_3,solver2,solver3_3)
-test4.test(r"results_full_history/Linear_Convection_Diffusion/40d")
+# #run the test for SimpleScaling
+test5=SimpleScaling(equation,solver1_3,solver2,solver3_3)
+test5.test(r"results_full_history/Linear_Convection_Diffusion/20d")
 
 #finish wandb
 wandb.finish()

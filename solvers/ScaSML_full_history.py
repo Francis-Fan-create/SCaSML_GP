@@ -196,9 +196,9 @@ class ScaSML_full_history(object):
         output_uz = jnp.concatenate((u, z), axis=-1)  # Concatenate u and z values, shape (batch_size, dim + 1)
         uncertainty = self.equation.uncertainty
         # Clip output_uz to avoid large values
-        return jnp.clip(output_uz, -uncertainty, uncertainty).astype(jnp.float16)
+        return jnp.clip(output_uz, -uncertainty, uncertainty)
 
-    def u_solve(self, n, rho, x_t, M=10):
+    def u_solve(self, n, rho, x_t, M=15):
         '''
         Approximate the solution of the PDE, return the ndarray of u(x_t) only.
         
@@ -213,7 +213,7 @@ class ScaSML_full_history(object):
         '''
         eq = self.equation
         # Calculate u_breve and z_breve using uz_solve
-        u_breve_z_breve = self.uz_solve(n, rho, x_t, 2)
+        u_breve_z_breve = self.uz_solve(n, rho, x_t,M)
         u_breve = u_breve_z_breve[:, 0][:, jnp.newaxis]
         
         u_hat = self.GP.predict(x_t)
