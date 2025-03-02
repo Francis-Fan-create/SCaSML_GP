@@ -198,7 +198,7 @@ class ScaSML_full_history(object):
         # Clip output_uz to avoid large values
         return jnp.clip(output_uz, -uncertainty, uncertainty).astype(jnp.float16)
 
-    def u_solve(self, n, rho, x_t, M=5):
+    def u_solve(self, n, rho, x_t, M=10):
         '''
         Approximate the solution of the PDE, return the ndarray of u(x_t) only.
         

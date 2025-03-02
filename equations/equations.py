@@ -416,9 +416,9 @@ class Grad_Dependent_Nonlinear(Equation):
         data2 = geom.random_boundary_points(num_boundary)  # Generates random points on the boundary.
         return data1, data2
     
-class Linear_HJB(Equation):
+class Linear_Convection_Diffusion(Equation):
     '''
-    Complicated HJB equation.
+    Linear Convection Diffusion equation.
     '''
     def __init__(self, n_input, n_output=1):
         '''
@@ -429,7 +429,7 @@ class Linear_HJB(Equation):
         - n_output (int): The dimension of the output space. Defaults to 1.
         '''
         super().__init__(n_input, n_output)
-        self.uncertainty = 1e-1
+        self.uncertainty = 0.2
         self.norm_estimation = 0.5 * self.n_input
     
     @partial(jit,static_argnames=["self"])
@@ -443,11 +443,11 @@ class Linear_HJB(Equation):
         Returns:
         - result (ndarray): A 2D tensor of shape (batch_size, 1), representing the terminal constraint.
         '''
-        x = x_t[:, :self.n_input - 1]  # Extracts the spatial coordinates.
-        sum_x = jnp.sum(x, axis=1)  # Computes the sum of spatial coordinates.
-        result = sum_x  # Computes the terminal constraint.
+        x = x_t[:, :-1]
+        sum_x = jnp.sum(x, axis=1)
+        result = sum_x + self.T
         result = result[:, jnp.newaxis]  # Convert to 2D
-        return result.astype(jnp.float16) 
+        return result.astype(jnp.float16)
     
     def mu(self, x_t=0):
         '''
@@ -487,7 +487,7 @@ class Linear_HJB(Equation):
         Returns:
         - result (ndarray): A 2D array of shape (batch_size, n_output), representing the generator term.
         '''
-        return 2 * jnp.ones_like(u)  # Shape: (batch_size, n_output)
+        return jnp.zeros_like(u)  # Shape: (batch_size, n_output)
 
     @partial(jit,static_argnames=["self"])
     def exact_solution(self, x_t):
@@ -503,7 +503,7 @@ class Linear_HJB(Equation):
         t = x_t[:, -1]
         x = x_t[:, :-1]
         sum_x = jnp.sum(x, axis=1)
-        result = sum_x + (self.T - t)
+        result = sum_x + t
         result = result[:, jnp.newaxis]  # Convert to 2D
         return result.astype(jnp.float16)
     
@@ -535,7 +535,7 @@ class Linear_HJB(Equation):
         self.t0 = t0
         self.T = T
         self.radius = 0.5
-        spacedomain = dde.geometry.Hypercube([-self.radius] * (self.n_input - 1), [self.radius] * (self.n_input - 1))  # Defines the spatial domain, for train
+        spacedomain = dde.geometry.Hypercube([0] * (self.n_input - 1), [self.radius] * (self.n_input - 1))  # Defines the spatial domain, for train
         timedomain = dde.geometry.TimeDomain(t0, self.T)  # Defines the time domain.
         geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
         self.geomx = spacedomain
@@ -557,7 +557,7 @@ class Linear_HJB(Equation):
         self.T = T
         self.test_T = T
         self.test_radius = 0.5
-        spacedomain = dde.geometry.Hypercube([-self.test_radius] * (self.n_input - 1), [self.test_radius] * (self.n_input - 1))  # Defines the spatial domain, for test.
+        spacedomain = dde.geometry.Hypercube([0] * (self.n_input - 1), [self.test_radius] * (self.n_input - 1))  # Defines the spatial domain, for test.
         timedomain = dde.geometry.TimeDomain(t0, self.test_T)  # Defines the time domain for test.
         geom = dde.geometry.GeometryXTime(spacedomain, timedomain)  # Combines spatial and time domains.
         self.geomx = spacedomain

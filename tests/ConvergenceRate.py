@@ -45,7 +45,7 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=2, n_samples=1000):
+    def test(self, save_path, rhomax=1, n_samples=1000):
         '''
         Compares solvers on different training iterations.
     
@@ -109,13 +109,13 @@ class ConvergenceRate(object):
             self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
         
             # Predict with solver1
-            sol1 = self.solver1.predict(xt_values)
+            sol1 = self.solver1.predict(xt_values).astype(np.float64)
         
             # # Solve with solver2 (baseline solver)
-            # sol2 = self.solver2.u_solve(rhomax, rhomax, xt_values)
+            # sol2 = self.solver2.u_solve(rhomax, rhomax, xt_values).astype(np.float64)
         
             # Solve with solver3 using the trained solver1
-            sol3 = self.solver3.u_solve(rhomax, rhomax, xt_values)
+            sol3 = self.solver3.u_solve(rhomax, rhomax, xt_values).astype(np.float64)
         
             # Compute errors
             errors1 = np.abs(sol1 - exact_sol).flatten()

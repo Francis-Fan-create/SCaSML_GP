@@ -484,7 +484,7 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=1000):
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=2000):
         '''Solve the Gaussian process using Adam optimizer from Optax with Early Stopping and Exponentially Decaying Learning Rate'''
         optimizer_steps = GN_steps
         initial_learning_rate = 5e-2  # Initial learning rate
@@ -664,16 +664,16 @@ class GP(object):
         '''Compute the PDE loss at x_t_infer'''
         raise NotImplementedError
     
-class GP_Linear_HJB(GP):
-    '''Gaussian Kernel Solver for Complicated HJB'''
+class GP_Linear_Convection_Diffusion(GP):
+    '''Gaussian Kernel Solver for Linear Convection Diffusion'''
 
     def __init__(self, equation):
-        super(GP_Linear_HJB, self).__init__(equation)
+        super(GP_Linear_Convection_Diffusion, self).__init__(equation)
 
     
     def rhs_f(self, x_t):
         '''Compute the nonlinear term on the right at x_t'''
-        return -2 * jnp.ones((x_t.shape[0]), dtype=x_t.dtype)
+        return jnp.zeros((x_t.shape[0]), dtype=x_t.dtype)
 
     
     def time_der_rep(self, sol, rhs_f):
@@ -723,7 +723,7 @@ class GP_Linear_HJB(GP):
         div_x_sol = div_x_sol_kernel @ right_vector
         laplacian_x_t_sol = laplacian_x_t_sol_kernel @ right_vector
 
-        loss = dt_x_t_sol - (1 / d) * div_x_sol + laplacian_x_t_sol + 2
+        loss = dt_x_t_sol - (1 / d) * div_x_sol + laplacian_x_t_sol
         return loss.astype(jnp.float16)
 
 class GP_Grad_Dependent_Nonlinear(GP):

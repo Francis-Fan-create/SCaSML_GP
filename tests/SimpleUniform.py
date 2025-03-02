@@ -46,7 +46,7 @@ class SimpleUniform(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=2, num_domain=1000, num_boundary=200):
+    def test(self, save_path, rhomax=1, num_domain=1000, num_boundary=200):
         '''
         Compares solvers on test data after training on a large training dataset.
     
@@ -101,19 +101,19 @@ class SimpleUniform(object):
         # Measure the time and predict using solver1
         print("Predicting with solver1 on test data...")
         start = time.time()
-        sol1 = self.solver1.predict(xt_test)
+        sol1 = self.solver1.predict(xt_test).astype(np.float64)
         time1 += time.time() - start
     
         # Measure the time and predict using solver2
         print("Predicting with solver2 on test data...")
         start = time.time()
-        sol2 = self.solver2.u_solve(n, rhomax, xt_test)
+        sol2 = self.solver2.u_solve(n, rhomax, xt_test).astype(np.float64)
         time2 += time.time() - start
     
         # Measure the time and predict using solver3
         print("Predicting with solver3 on test data...")
         start = time.time()
-        sol3 = self.solver3.u_solve(n, rhomax, xt_test)
+        sol3 = self.solver3.u_solve(n, rhomax, xt_test).astype(np.float64)
         time3 += time.time() - start
 
         # Compute the average error and relative error

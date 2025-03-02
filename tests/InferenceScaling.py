@@ -117,12 +117,12 @@ class InferenceScaling(object):
                 print(f"Current rho value: {rho}")
             
                 # Predict with solver1
-                sol1 = self.solver1.predict(xt_values)
+                sol1 = self.solver1.predict(xt_values).astype(np.float64)
             
                 # # Solve with solver2 (baseline solver)
-                sol2 = self.solver2.u_solve(rho, rho, xt_values)
+                sol2 = self.solver2.u_solve(rho, rho, xt_values).astype(np.float64)
                 # Solve with solver3 using the trained solver1
-                sol3 = self.solver3.u_solve(rho, rho, xt_values)
+                sol3 = self.solver3.u_solve(rho, rho, xt_values).astype(np.float64)
             
                 # Compute errors
                 errors1 = np.linalg.norm(sol1 - exact_sol)
@@ -141,7 +141,6 @@ class InferenceScaling(object):
         
         # Plot error ratios
         plt.figure()
-        epsilon = 1e-10  # To avoid log(0)
         
         # Compute error arrays for GP and MLP, and combine them using element-wise min
         error1_array = np.array(error1_list)
