@@ -191,7 +191,7 @@ class SimpleScaling(object):
         ax.legend(frameon=False, loc='upper right', handlelength=1.5, handletextpad=0.5)
         
         plt.tight_layout()
-        plt.savefig(f'{save_path}/InferenceScaling_Improvement.pdf', format='pdf',
+        plt.savefig(f'{save_path}/SimpleScaling_Improvement.pdf', format='pdf',
                     bbox_inches='tight', pad_inches=0.05)
         plt.close()
     
