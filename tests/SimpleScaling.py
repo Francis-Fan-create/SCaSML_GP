@@ -129,9 +129,9 @@ class SimpleScaling(object):
                 errors2 = np.linalg.norm(sol2 - exact_sol)
                 errors3 = np.linalg.norm(sol3 - exact_sol)
             
-                error_value1 = errors1 / np.linalg.norm(exact_sol)
-                error_value2 = errors2 / np.linalg.norm(exact_sol)
-                error_value3 = errors3 / np.linalg.norm(exact_sol)
+                error_value1 = errors1
+                error_value2 = errors2
+                error_value3 = errors3
 
                 error1_list.append(error_value1)
                 error2_list.append(error_value2)

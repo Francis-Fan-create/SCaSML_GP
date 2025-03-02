@@ -66,7 +66,7 @@ solver3_3=ScaSML_full_history(equation=equation,GP=solver1_3) #ScaSML object
 # test2.test(r"results_full_history/Linear_Convection_Diffusion/40d")
 # #run the test for SimpleScaling
 test5=SimpleScaling(equation,solver1_3,solver2,solver3_3)
-test5.test(r"results_full_history/Linear_Convection_Diffusion/20d")
+test5.test(r"results_full_history/Linear_Convection_Diffusion/40d")
 
 #finish wandb
 wandb.finish()
