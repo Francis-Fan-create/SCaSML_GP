@@ -98,6 +98,7 @@ class MLP_full_history(object):
         # Generate Monte Carlo samples for backward Euler
         std_normal = random.normal(subkey, shape=(batch_size, MC_g, dim), dtype=jnp.float16)
         dW = jnp.sqrt(T-t)[:, jnp.newaxis, jnp.newaxis] * std_normal  # Brownian increments, shape (batch_size, MC_g, dim)
+        # self.evaluation_counter+=MC_g
         X = jnp.repeat(x.reshape(x.shape[0], 1, x.shape[1]), MC_g, axis=1)  # Replicated spatial coordinates, shape (batch_size, MC_g, dim)
         disturbed_X = X + mu*(T-t)[:, jnp.newaxis, jnp.newaxis]+ sigma * dW  # Disturbed spatial coordinates, shape (batch_size, MC_g, dim)
         
@@ -118,8 +119,8 @@ class MLP_full_history(object):
         # Compute u and z values
         u = jnp.mean(distrubed_output_terminal, axis=1)  # Mean over Monte Carlo samples, shape (batch_size, 1)
 
-        delta_t = (T - t + 1e-6)[:, jnp.newaxis]  # Avoid division by zero, shape (batch_size, 1)
-        z = jnp.mean(distrubed_output_terminal * std_normal, axis=1) / (delta_t)  # Compute z values, shape (batch_size, dim)   
+        delta_sqrt_t = jnp.sqrt(T-t)[:, jnp.newaxis]  # Square root of time increment, shape (batch_size, 1)
+        z = jnp.mean(distrubed_output_terminal * std_normal, axis=1) / (delta_sqrt_t)  # Compute z values, shape (batch_size, dim)   
         cated_uz = jnp.concatenate((u, z), axis=-1)  # Concatenate u and z values, shape (batch_size, dim + 1)     
         # Recursive call
         if n == 0:
@@ -138,10 +139,10 @@ class MLP_full_history(object):
             dW =jnp.sqrt(sampled_time_steps) * std_normal  # Brownian increments for current time step, shape (batch_size, MC_f, dim)
             # self.evaluation_counter+=MC_f*dim
             X += mu*(sampled_time_steps)+sigma * dW  # Update spatial coordinates
-            co_solver_l = lambda X_t: self.uz_solve(n=l, rho= None, x_t=X_t,M=M)  # Co-solver for level l
-            co_solver_l_minus_1 = lambda X_t: self.uz_solve(n=l - 1, rho= None, x_t=X_t,M=M)  # Co-solver for level l - 1
+            co_solver_l = lambda X_t: self.uz_solve(n=l, rho= None, x_t=X_t, M=M)  # Co-solver for level l
+            co_solver_l_minus_1 = lambda X_t: self.uz_solve(n=l - 1, rho= None, x_t=X_t, M=M)  # Co-solver for level l - 1
             # Compute Compute u and z values for current quadrature point using vmap
-            input_intermediates = jnp.concatenate((X, sampled_time_steps), axis=2)  # Intermediate spatial-temporal coordinates, shape (batch_size, MC_f, n_input)
+            input_intermediates = jnp.concatenate((X, t[:,jnp.newaxis,jnp.newaxis]+sampled_time_steps), axis=2)  # Intermediate spatial-temporal coordinates, shape (batch_size, MC_f, n_input)
             input_intermediates_flat = input_intermediates.reshape(-1, self.n_input)
             simulated_flat = co_solver_l(input_intermediates_flat)
             simulated = simulated_flat.reshape(batch_size, MC_f, dim + 1)
@@ -159,7 +160,7 @@ class MLP_full_history(object):
             # Adjust u and z values if l > 0
             if l:
                 # Compute Compute u and z values for current quadrature point using vmap
-                input_intermediates = jnp.concatenate((X, sampled_time_steps), axis=2)  # Intermediate spatial-temporal coordinates, shape (batch_size, MC_f, n_input)
+                input_intermediates = jnp.concatenate((X, t[:,jnp.newaxis,jnp.newaxis]+sampled_time_steps), axis=2)  # Intermediate spatial-temporal coordinates, shape (batch_size, MC_f, n_input)
                 input_intermediates_flat = input_intermediates.reshape(-1, self.n_input)
                 simulated_flat = co_solver_l_minus_1(input_intermediates_flat)
                 simulated = simulated_flat.reshape(batch_size, MC_f, dim + 1)
@@ -176,7 +177,7 @@ class MLP_full_history(object):
                 z -= (T-t)[:,jnp.newaxis] * jnp.mean((y * std_normal / (delta_sqrt_t)),axis=1)  # Update z values  
         output_cated = jnp.concatenate((u, z), axis=-1)  # Concatenate adjusted u and z values, shape (batch_size, dim + 1)
         norm_estimation = self.equation.norm_estimation
-        return jnp.clip(output_cated, -norm_estimation, norm_estimation) # Clip the output to avoid numerical instability
+        return jnp.clip(output_cated, -norm_estimation, norm_estimation).astype(jnp.float16)  # Clip the output to avoid numerical instability
     
     def u_solve(self, n, rho, x_t, M=15):
         '''
@@ -187,7 +188,7 @@ class MLP_full_history(object):
             rho (int): Current level.
             x_t (ndarray): A batch of spatial-temporal coordinates, shape (batch_size, n_input), where
                            batch_size is the number of samples in the batch and n_input is the number of input features (spatial dimensions + 1 for time).
-            M (int): Exponential base for sample size.
+        
         Returns:
             ndarray: The u values for each sample in the batch, shape (batch_size, 1).
                      Here, u is the approximate solution of the PDE at the given coordinates.
