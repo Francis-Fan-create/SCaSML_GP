@@ -663,68 +663,6 @@ class GP(object):
     def compute_PDE_loss(self,x_t_infer):
         '''Compute the PDE loss at x_t_infer'''
         raise NotImplementedError
-    
-class GP_Linear_Convection_Diffusion(GP):
-    '''Gaussian Kernel Solver for Linear Convection Diffusion'''
-
-    def __init__(self, equation):
-        super(GP_Linear_Convection_Diffusion, self).__init__(equation)
-
-    
-    def rhs_f(self, x_t):
-        '''Compute the nonlinear term on the right at x_t'''
-        return jnp.zeros((x_t.shape[0]), dtype=x_t.dtype)
-
-    
-    def time_der_rep(self, sol, rhs_f):
-        '''Compute the operator F at sol'''
-        N_domain = self.N_domain
-        N_boundary = self.N_boundary
-        d = self.d
-
-        z_3 = sol[N_domain:2 * N_domain]
-        z_5 = sol[2*N_domain:]
-
-        rep_domain = (1 / d) * z_5 - z_3 + rhs_f
-        return rep_domain.astype(jnp.float16)
-
-    
-    def DF_domain_without_time(self, sol):
-        '''Compute the Jacobian of the operator F at sol'''
-        N_domain = self.N_domain
-        N_boundary = self.N_boundary
-        d = self.d
-
-        zeros_nd_nd = jnp.zeros((N_domain, N_domain))
-        I_nd = jnp.eye(N_domain)
-
-        DF_domain_without_time = jnp.hstack([
-            zeros_nd_nd,
-            -I_nd,
-            (1 / d) * I_nd
-        ])
- 
-        return DF_domain_without_time.astype(jnp.float16)
-
-    
-    def compute_PDE_loss(self, x_t_infer):
-        '''Compute the PDE loss at x_t_infer'''
-        d = self.d
-        right_vector = self.right_vector
-
-        dt_x_t_sol_kernel = self.dt_x_t_kernel_x_t_phi(
-            x_t_infer, self.x_t_domain, self.x_t_boundary)
-        div_x_sol_kernel = self.div_x_t_kernel_x_t_phi(
-            x_t_infer, self.x_t_domain, self.x_t_boundary)
-        laplacian_x_t_sol_kernel = self.laplacian_x_t_kernel_x_t_phi(
-            x_t_infer, self.x_t_domain, self.x_t_boundary)
-
-        dt_x_t_sol = dt_x_t_sol_kernel @ right_vector
-        div_x_sol = div_x_sol_kernel @ right_vector
-        laplacian_x_t_sol = laplacian_x_t_sol_kernel @ right_vector
-
-        loss = dt_x_t_sol - (1 / d) * div_x_sol + laplacian_x_t_sol
-        return loss.astype(jnp.float16)
 
 class GP_Grad_Dependent_Nonlinear(GP):
     '''Gaussian Kernel Solver for the Grad_Dependent_Nonlinear'''
