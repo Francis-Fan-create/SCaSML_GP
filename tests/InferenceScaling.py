@@ -124,10 +124,12 @@ class InferenceScaling(object):
                 # Solve with solver3 using the trained solver1
                 sol3 = self.solver3.u_solve(rho, rho, xt_values).astype(np.float64)
             
+                # creating mask for valid data points
+                valid_mask = ~(np.isnan(sol1) | np.isnan(sol2) | np.isnan(sol3) | np.isnan(exact_sol)).flatten()
                 # Compute errors
-                errors1 = np.linalg.norm(sol1 - exact_sol)
-                errors2 = np.linalg.norm(sol2 - exact_sol)
-                errors3 = np.linalg.norm(sol3 - exact_sol)
+                errors1 = np.linalg.norm(sol1[valid_mask] - exact_sol[valid_mask])
+                errors2 = np.linalg.norm(sol2[valid_mask] - exact_sol[valid_mask])
+                errors3 = np.linalg.norm(sol3[valid_mask] - exact_sol[valid_mask])
             
                 error_value1 = errors1 / np.linalg.norm(exact_sol)
                 error_value2 = errors2 / np.linalg.norm(exact_sol)
