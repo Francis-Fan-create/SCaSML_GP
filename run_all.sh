@@ -1,5 +1,5 @@
 #!/bin/bash
-# How to use in bash: 1. chmod +x high_dim_group.sh 2. ./high_dim_group.sh
+# How to use in bash: 1. chmod +x run_all.sh 2. ./run_all.sh
 # device: A800 80G
 
 # Group 1
