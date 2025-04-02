@@ -85,7 +85,7 @@ class ConvergenceRate(object):
     
     
         # Fix GN_steps
-        GN_steps = 1000 
+        GN_steps = 200 
         # Build a list for training sizes
         list_len = 10
         train_sizes_domain = range(100, 1100, 100)

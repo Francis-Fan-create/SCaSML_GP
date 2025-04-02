@@ -484,86 +484,112 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=2000):
-        '''Solve the Gaussian process using Adam optimizer from Optax with Early Stopping and Exponentially Decaying Learning Rate'''
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=200):
+        '''Solve the Gaussian process using Newton's method with line search and regularization'''
         optimizer_steps = GN_steps
-        initial_learning_rate = 5e-2  # Initial learning rate
-        learning_rate_decay_steps = 1000  # Number of steps before each decay
-        learning_rate_decay_rate = 0.96  # Decay rate
-        # patience = 100
-        # delta = 1e-6
-
-        # Compute the right-hand side and boundary condition
+        initial_damping = 1e-4  # Initial regularization parameter
+        max_damping = 1.0  # Maximum regularization parameter
+        damping_factor = 10.0  # Regularization growth factor
+        damping_decrease = 0.1  # Regularization reduction factor
+        
+        # Calculate right-hand side and boundary conditions
         rhs_f = self.rhs_f(x_t_domain)
         bdy_g = self.bdy_g(x_t_boundary)
-
+        
         # Define cost function
         kernel_phi_phi_perturb = self.kernel_phi_phi(x_t_domain, x_t_boundary)
         sol = random.normal(random.PRNGKey(0), (3 * self.N_domain,)) * 1e-3  # Scaled initialization
         L = self.cholesky_phi_phi_perturb
-
+        
         J_hist = []
         J_now = self.loss_function(sol, rhs_f, bdy_g, L)
         J_hist.append(J_now)
         print(f"Initial loss: {J_now}")
-
+        
+        # Define gradient and Hessian functions
         grad_J = grad(self.loss_function)
-
-        # Initialize Exponentially Decaying Learning Rate Scheduler
-        scheduler = optax.exponential_decay(
-            init_value=initial_learning_rate,
-            transition_steps=learning_rate_decay_steps,
-            decay_rate=learning_rate_decay_rate,
-            staircase=True
-        )
-
-        # Initialize Adan optimizer with gradient clipping and learning rate decay
-        optimizer = optax.chain(
-            optax.clip_by_global_norm(1.0),
-            optax.adan(learning_rate=scheduler)
-        )
-        opt_state = optimizer.init(sol)
-
-        # best_loss = J_now
-        # epochs_since_improvement = 0
-
+        hess_J = hessian(self.loss_function)
+        
+        damping = initial_damping
+        
         for iter_step in range(optimizer_steps):
+            # Calculate current gradient
             gradient = grad_J(sol, rhs_f, bdy_g, L)
             grad_norm = jnp.linalg.norm(gradient)
-    
-            # Update parameters using Adan optimizer
-            updates, opt_state = optimizer.update(gradient, opt_state, sol)
-            sol = optax.apply_updates(sol, updates)
-    
-            # Compute current loss
-            J_now = self.loss_function(sol, rhs_f, bdy_g, L)
-            J_hist.append(J_now)
-    
-            # # Check for improvement
-            # if J_now < best_loss - delta:
-            #     best_loss = J_now
-            #     epochs_since_improvement = 0
-            # else:
-            #     epochs_since_improvement += 1
-    
-            # Log update details
-            if iter_step % 10 == 0 or iter_step == optimizer_steps - 1:
-                print(f"Iteration {iter_step}: Loss = {J_now}, Gradient norm = {grad_norm}")
-    
-            # # Early stopping based on patience
-            # if epochs_since_improvement >= patience:
-            #     print(f"Early stopping at iteration {iter_step} due to no improvement in loss for {patience} steps.")
-            #     break
-    
+            
             # Early stopping if gradient norm is small
             if grad_norm < 1e-5:
                 print(f"Early stopping at iteration {iter_step} due to small gradient norm.")
                 break
-    
-
+            
+            # Calculate Hessian matrix
+            hessian_matrix = hess_J(sol, rhs_f, bdy_g, L)
+            
+            # Add regularization to ensure positive definiteness of Hessian
+            regularized_hessian = hessian_matrix + damping * jnp.eye(hessian_matrix.shape[0])
+            
+            # Solve for Newton direction: H * Δx = -g
+            try:
+                newton_direction = jnp.linalg.solve(regularized_hessian, -gradient)
+            except:
+                # If matrix solve fails, increase regularization and try again
+                damping = min(damping * damping_factor, max_damping)
+                regularized_hessian = hessian_matrix + damping * jnp.eye(hessian_matrix.shape[0])
+                newton_direction = jnp.linalg.solve(regularized_hessian, -gradient)
+            
+            # Line search to determine step size
+            alpha = 1.0
+            beta = 0.5  # Step size decay factor
+            c = 1e-4   # Armijo condition constant
+            max_line_search_iters = 10
+            
+            # Calculate directional derivative for current direction
+            directional_derivative = jnp.dot(gradient, newton_direction)
+            
+            # Line search: Armijo condition
+            current_loss = J_now
+            
+            # Standard Python loop for line search
+            found_step = False
+            line_search_iters = 0
+            new_loss = None
+            
+            while not found_step and line_search_iters < max_line_search_iters:
+                # Calculate new candidate solution
+                new_sol = sol + alpha * newton_direction
+                new_loss = self.loss_function(new_sol, rhs_f, bdy_g, L)
+                
+                # Check Armijo condition
+                sufficient_decrease = new_loss <= current_loss + c * alpha * directional_derivative
+                
+                if sufficient_decrease:
+                    found_step = True
+                else:
+                    # Reduce step size
+                    alpha *= beta
+                    line_search_iters += 1
+            
+            # Update solution
+            sol = sol + alpha * newton_direction
+            
+            # Calculate current loss
+            J_now = self.loss_function(sol, rhs_f, bdy_g, L)
+            J_hist.append(J_now)
+            
+            # If loss decreases, reduce regularization parameter
+            if J_now < current_loss:
+                damping = max(damping * damping_decrease, initial_damping)
+            else:
+                # If loss doesn't decrease, increase regularization parameter
+                damping = min(damping * damping_factor, max_damping)
+            
+            # Print update details
+            if iter_step % 10 == 0 or iter_step == optimizer_steps - 1:
+                print(f"Iteration {iter_step}: Loss = {J_now}, Gradient norm = {grad_norm}, Damping = {damping}, Step size = {alpha}")
+        
         self.loss_history = J_hist
-    
-        # Compute the final feature vector z
+        
+        # Calculate final feature vector z
         z_1 = sol[:self.N_domain]
         z_2 = bdy_g
         z_3 = sol[self.N_domain:2 * self.N_domain]
@@ -572,9 +598,9 @@ class GP(object):
         z = jnp.concatenate([z_1, z_2, z_3, z_4, z_5], axis=0)
         right_vector = jnp.linalg.solve(kernel_phi_phi_perturb, z)
         self.right_vector = right_vector[:, jnp.newaxis]
-    
+        
         sol_on_domain = self.predict(x_t_domain)
-    
+        
         return sol_on_domain
     
     # def predict(self, x_t_infer):

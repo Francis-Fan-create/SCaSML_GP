@@ -86,7 +86,7 @@ class InferenceScaling(object):
     
     
         # Fix GN_steps
-        GN_steps = 1000 
+        GN_steps = 200 
         # Build a list for training sizes
         list_len = rhomax
         train_sizes_domain = 1000
