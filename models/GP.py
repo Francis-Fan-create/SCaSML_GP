@@ -539,35 +539,35 @@ class GP(object):
             
             # Line search to determine step size
             alpha = 1.0
-            beta = 0.5  # Step size decay factor
-            c = 1e-4   # Armijo condition constant
-            max_line_search_iters = 10
+            # beta = 0.5  # Step size decay factor
+            # c = 1e-4   # Armijo condition constant
+            # max_line_search_iters = 10
             
-            # Calculate directional derivative for current direction
-            directional_derivative = jnp.dot(gradient, newton_direction)
+            # # Calculate directional derivative for current direction
+            # directional_derivative = jnp.dot(gradient, newton_direction)
             
             # Line search: Armijo condition
             current_loss = J_now
             
-            # Standard Python loop for line search
-            found_step = False
-            line_search_iters = 0
-            new_loss = None
+            # # Standard Python loop for line search
+            # found_step = False
+            # line_search_iters = 0
+            # new_loss = None
             
-            while not found_step and line_search_iters < max_line_search_iters:
-                # Calculate new candidate solution
-                new_sol = sol + alpha * newton_direction
-                new_loss = self.loss_function(new_sol, rhs_f, bdy_g, L)
+            # while not found_step and line_search_iters < max_line_search_iters:
+            #     # Calculate new candidate solution
+            #     new_sol = sol + alpha * newton_direction
+            #     new_loss = self.loss_function(new_sol, rhs_f, bdy_g, L)
                 
-                # Check Armijo condition
-                sufficient_decrease = new_loss <= current_loss + c * alpha * directional_derivative
+            #     # Check Armijo condition
+            #     sufficient_decrease = new_loss <= current_loss + c * alpha * directional_derivative
                 
-                if sufficient_decrease:
-                    found_step = True
-                else:
-                    # Reduce step size
-                    alpha *= beta
-                    line_search_iters += 1
+            #     if sufficient_decrease:
+            #         found_step = True
+            #     else:
+            #         # Reduce step size
+            #         alpha *= beta
+            #         line_search_iters += 1
             
             # Update solution
             sol = sol + alpha * newton_direction

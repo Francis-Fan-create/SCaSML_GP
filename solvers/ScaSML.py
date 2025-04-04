@@ -281,7 +281,7 @@ class ScaSML:
         output_uz = jnp.concatenate((u, z), axis=-1)
         uncertainty = self.equation.uncertainty
         # Clip output_uz to avoid large values
-        return jnp.clip(output_uz, -uncertainty, uncertainty)
+        return jnp.clip(output_uz, -uncertainty, uncertainty).astype(jnp.float16)
 
     def u_solve(self, n, rho, x_t):
         '''
