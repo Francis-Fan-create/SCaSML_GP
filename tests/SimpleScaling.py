@@ -86,7 +86,7 @@ class SimpleScaling(object):
     
     
         # Fix GN_steps
-        GN_steps = 200 
+        GN_steps = 20 
         # Build a list for training sizes
         list_len = base_max
         train_sizes_domain = 1000

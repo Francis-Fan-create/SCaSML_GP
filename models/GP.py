@@ -484,7 +484,7 @@ class GP(object):
     #     else:
     #         print("Gradients mismatch. Review loss_function and Hessian_GN.")
     
-    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=200):
+    def GPsolver(self, x_t_domain, x_t_boundary, GN_steps=20):
         '''Solve the Gaussian process using Newton's method with line search and regularization'''
         optimizer_steps = GN_steps
         initial_damping = 1e-4  # Initial regularization parameter
@@ -546,8 +546,8 @@ class GP(object):
             # # Calculate directional derivative for current direction
             # directional_derivative = jnp.dot(gradient, newton_direction)
             
-            # Line search: Armijo condition
-            current_loss = J_now
+            # # Line search: Armijo condition
+            # current_loss = J_now
             
             # # Standard Python loop for line search
             # found_step = False
@@ -576,12 +576,12 @@ class GP(object):
             J_now = self.loss_function(sol, rhs_f, bdy_g, L)
             J_hist.append(J_now)
             
-            # If loss decreases, reduce regularization parameter
-            if J_now < current_loss:
-                damping = max(damping * damping_decrease, initial_damping)
-            else:
-                # If loss doesn't decrease, increase regularization parameter
-                damping = min(damping * damping_factor, max_damping)
+            # # If loss decreases, reduce regularization parameter
+            # if J_now < current_loss:
+            #     damping = max(damping * damping_decrease, initial_damping)
+            # else:
+            #     # If loss doesn't decrease, increase regularization parameter
+            #     damping = min(damping * damping_factor, max_damping)
             
             # Print update details
             if iter_step % 10 == 0 or iter_step == optimizer_steps - 1:
