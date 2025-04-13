@@ -45,13 +45,12 @@ class ConvergenceRate(object):
         self.t0 = equation.t0  # equation.t0: float
         self.T = equation.T  # equation.T: float
 
-    def test(self, save_path, rhomax=2, n_samples=1000):
+    def test(self, save_path, n_samples=1000):
         '''
         Compares solvers on different training iterations.
     
         Parameters:
         save_path (str): The path to save the results.
-        rhomax (int): The fixed value of rho for approximation parameters.
         n_samples (int): The number of samples for testing (test set).
         '''
         # Initialize the profiler
@@ -80,7 +79,7 @@ class ConvergenceRate(object):
     
         # Set the approximation parameters
         eq = self.equation
-        eq_dim = eq.n_input - 1
+        d = eq.n_input - 1
         geom = eq.geometry()
     
     
@@ -100,22 +99,28 @@ class ConvergenceRate(object):
         xt_values_domain, xt_values_boundary = eq.generate_test_data(n_samples_domain, n_samples_boundary)
         xt_values = np.concatenate((xt_values_domain, xt_values_boundary), axis=0)
         exact_sol = eq.exact_solution(xt_values)
+        domain_sizes = np.array(train_sizes_domain)
+        boundary_sizes = np.array(train_sizes_boundary)
+        train_sizes = domain_sizes + boundary_sizes
     
     
         for j in range(list_len):
             print(f"Training solver1 with {train_sizes_domain[j]} domain points and {train_sizes_boundary[j]} boundary points...")
             data_domain_train, data_boundary_train = eq.generate_data(train_sizes_domain[j], train_sizes_boundary[j])
+            train_pts = train_sizes[j]
+            rho = int(np.log(train_pts)/np.log(np.log(train_pts)))
             # Train solver1 with fixed training sample size and varying GN_steps
             self.solver1.GPsolver(data_domain_train, data_boundary_train, GN_steps=GN_steps)
+
         
             # Predict with solver1
             sol1 = self.solver1.predict(xt_values).astype(np.float64)
         
             # # Solve with solver2 (baseline solver)
-            # sol2 = self.solver2.u_solve(rhomax, rhomax, xt_values).astype(np.float64)
+            # sol2 = self.solver2.u_solve(rho, rho, xt_values).astype(np.float64)
         
             # Solve with solver3 using the trained solver1
-            sol3 = self.solver3.u_solve(rhomax, rhomax, xt_values).astype(np.float64)
+            sol3 = self.solver3.u_solve(rho, rho, xt_values).astype(np.float64)
         
             # creating mask for valid data points
             valid_mask = ~(np.isnan(sol1) | np.isnan(sol3) | np.isnan(exact_sol)).flatten()
@@ -135,10 +140,6 @@ class ConvergenceRate(object):
         # Plot error ratios
         plt.figure()
         epsilon = 1e-10  # To avoid log(0)
-
-        domain_sizes = np.array(train_sizes_domain)
-        boundary_sizes = np.array(train_sizes_boundary)
-        train_sizes = domain_sizes + boundary_sizes
         error1_array = np.array(error1_list)
         # error2_array = np.array(error2_list)
         error3_array = np.array(error3_list)
@@ -277,9 +278,9 @@ class ConvergenceRate(object):
         # Create minimalist legend
         legend_elements = [
             plt.Line2D([0], [0], color=COLOR_PALETTE['GP'], lw=1.2,
-                     label=f'GP (m={slope1:.2f})'),
+                     label=f'GP ($\\gamma$={-slope1:.2f})'),
             plt.Line2D([0], [0], color=COLOR_PALETTE['SCaSML'], lw=1.2,
-                     label=f'SCaSML (m={slope3:.2f})')
+                     label=f'SCaSML ($\\gamma$={-slope3:.2f})')
         ]
         ax.legend(handles=legend_elements, frameon=False,
                 loc='upper right', bbox_to_anchor=(1, 1),
@@ -300,4 +301,4 @@ class ConvergenceRate(object):
         profiler.disable()
         profiler.print_stats(sort='cumtime')
     
-        return rhomax
+        return rho
