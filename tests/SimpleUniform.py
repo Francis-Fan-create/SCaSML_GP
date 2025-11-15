@@ -413,15 +413,28 @@ class SimpleUniform(object):
         
         print("Real Solution->", real_sol_L2)
         
-        print(f"PDE Loss->", "min:", np.min(PDE_loss), "max:", np.max(PDE_loss), "mean:", np.mean(PDE_loss))
+        print(f"PDE Loss->", "min:", np.min(PDE_loss), "max:", np.max(PDE_loss), "mean:", np.mean(PDE_loss), "std:", np.std(PDE_loss))
+        
+        # Calculate confidence intervals (95%)
+        def compute_ci_95(errors):
+            mean = np.mean(errors)
+            std = np.std(errors)
+            n = len(errors)
+            # Use t-distribution for 95% CI
+            ci = 1.96 * std / np.sqrt(n)
+            return mean - ci, mean + ci
+        
+        ci_lower1, ci_upper1 = compute_ci_95(errors1)
+        ci_lower2, ci_upper2 = compute_ci_95(errors2)
+        ci_lower3, ci_upper3 = compute_ci_95(errors3)
 
-        print(f"GP L1, rho={rhomax}->","min:", np.min(errors1), "max:", np.max(errors1), "mean:", np.mean(errors1))
+        print(f"GP L1, rho={rhomax}->","min:", np.min(errors1), "max:", np.max(errors1), "mean:", np.mean(errors1), "std:", np.std(errors1), "95% CI: [{:.6e}, {:.6e}]".format(ci_lower1, ci_upper1))
         
         
-        print(f"MLP L1, rho={rhomax}->","min:", np.min(errors2), "max:", np.max(errors2), "mean:", np.mean(errors2))
+        print(f"MLP L1, rho={rhomax}->","min:", np.min(errors2), "max:", np.max(errors2), "mean:", np.mean(errors2), "std:", np.std(errors2), "95% CI: [{:.6e}, {:.6e}]".format(ci_lower2, ci_upper2))
         
         
-        print(f"ScaSML L1, rho={rhomax}->","min:", np.min(errors3), "max:", np.max(errors3), "mean:", np.mean(errors3))
+        print(f"ScaSML L1, rho={rhomax}->","min:", np.min(errors3), "max:", np.max(errors3), "mean:", np.mean(errors3), "std:", np.std(errors3), "95% CI: [{:.6e}, {:.6e}]".format(ci_lower3, ci_upper3))
         
         
         # Calculate the sums of positive and negative differences
@@ -434,8 +447,12 @@ class SimpleUniform(object):
         print(f'MLP L2 - ScaSML L2, rho={rhomax}->','positive count:', np.sum(errors_23 > 0), 'negative count:', np.sum(errors_23 < 0), 'positive sum:', positive_sum_23, 'negative sum:', negative_sum_23)
         # Log the results to wandb
         wandb.log({f"mean of GP L2, rho={rhomax}": np.mean(errors1), f"mean of MLP L2, rho={rhomax}": np.mean(errors2), f"mean of ScaSML L2, rho={rhomax}": np.mean(errors3)})
+        wandb.log({f"std of GP L2, rho={rhomax}": np.std(errors1), f"std of MLP L2, rho={rhomax}": np.std(errors2), f"std of ScaSML L2, rho={rhomax}": np.std(errors3)})
         wandb.log({f"min of GP L2, rho={rhomax}": np.min(errors1), f"min of MLP L2, rho={rhomax}": np.min(errors2), f"min of ScaSML L2, rho={rhomax}": np.min(errors3)})
         wandb.log({f"max of GP L2, rho={rhomax}": np.max(errors1), f"max of MLP L2, rho={rhomax}": np.max(errors2), f"max of ScaSML L2, rho={rhomax}": np.max(errors3)})
+        wandb.log({f"95% CI lower of GP L2, rho={rhomax}": ci_lower1, f"95% CI upper of GP L2, rho={rhomax}": ci_upper1})
+        wandb.log({f"95% CI lower of MLP L2, rho={rhomax}": ci_lower2, f"95% CI upper of MLP L2, rho={rhomax}": ci_upper2})
+        wandb.log({f"95% CI lower of ScaSML L2, rho={rhomax}": ci_lower3, f"95% CI upper of ScaSML L2, rho={rhomax}": ci_upper3})
         wandb.log({f"positive count of GP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_13 > 0), f"negative count of GP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_13 < 0), f"positive sum of GP L2 - ScaSML L2, rho={rhomax}": positive_sum_13, f"negative sum of GP L2 - ScaSML L2, rho={rhomax}": negative_sum_13})
         wandb.log({f"positive count of MLP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_23 > 0), f"negative count of MLP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_23 < 0), f"positive sum of MLP L2 - ScaSML L2, rho={rhomax}": positive_sum_23, f"negative sum of MLP L2 - ScaSML L2, rho={rhomax}": negative_sum_23})
         # reset stdout and stderr
