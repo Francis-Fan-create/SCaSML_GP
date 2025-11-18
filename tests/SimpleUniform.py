@@ -10,6 +10,7 @@ import shutil
 import jax.numpy as jnp
 from matplotlib.colors import LogNorm
 import scipy
+from scipy import stats
 
 class SimpleUniform(object):
     '''
@@ -428,6 +429,18 @@ class SimpleUniform(object):
         ci_lower2, ci_upper2 = compute_ci_95(errors2)
         ci_lower3, ci_upper3 = compute_ci_95(errors3)
 
+        # Paired t-tests: GP vs SCaSML and MLP vs SCaSML
+        try:
+            t_gp_scasml, p_gp_scasml = stats.ttest_rel(errors1, errors3)
+        except Exception:
+            t_gp_scasml, p_gp_scasml = float('nan'), float('nan')
+        try:
+            t_mlp_scasml, p_mlp_scasml = stats.ttest_rel(errors2, errors3)
+        except Exception:
+            t_mlp_scasml, p_mlp_scasml = float('nan'), float('nan')
+
+        
+
         print(f"GP L1, rho={rhomax}->","min:", np.min(errors1), "max:", np.max(errors1), "mean:", np.mean(errors1), "std:", np.std(errors1), "95% CI: [{:.6e}, {:.6e}]".format(ci_lower1, ci_upper1))
         
         
@@ -445,6 +458,10 @@ class SimpleUniform(object):
         # Display the positive count, negative count, positive sum, and negative sum of the difference of the errors
         print(f'GP L2 - ScaSML L2, rho={rhomax}->','positive count:', np.sum(errors_13 > 0), 'negative count:', np.sum(errors_13 < 0), 'positive sum:', positive_sum_13, 'negative sum:', negative_sum_13)
         print(f'MLP L2 - ScaSML L2, rho={rhomax}->','positive count:', np.sum(errors_23 > 0), 'negative count:', np.sum(errors_23 < 0), 'positive sum:', positive_sum_23, 'negative sum:', negative_sum_23)
+        # Print paired t-test results
+        print(f"Paired t-test GP vs SCaSML: t={t_gp_scasml:.4f}, p-value={p_gp_scasml:.4e}")
+        print(f"Paired t-test MLP vs SCaSML: t={t_mlp_scasml:.4f}, p-value={p_mlp_scasml:.4e}")
+
         # Log the results to wandb
         wandb.log({f"mean of GP L2, rho={rhomax}": np.mean(errors1), f"mean of MLP L2, rho={rhomax}": np.mean(errors2), f"mean of ScaSML L2, rho={rhomax}": np.mean(errors3)})
         wandb.log({f"std of GP L2, rho={rhomax}": np.std(errors1), f"std of MLP L2, rho={rhomax}": np.std(errors2), f"std of ScaSML L2, rho={rhomax}": np.std(errors3)})
@@ -455,6 +472,8 @@ class SimpleUniform(object):
         wandb.log({f"95% CI lower of ScaSML L2, rho={rhomax}": ci_lower3, f"95% CI upper of ScaSML L2, rho={rhomax}": ci_upper3})
         wandb.log({f"positive count of GP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_13 > 0), f"negative count of GP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_13 < 0), f"positive sum of GP L2 - ScaSML L2, rho={rhomax}": positive_sum_13, f"negative sum of GP L2 - ScaSML L2, rho={rhomax}": negative_sum_13})
         wandb.log({f"positive count of MLP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_23 > 0), f"negative count of MLP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_23 < 0), f"positive sum of MLP L2 - ScaSML L2, rho={rhomax}": positive_sum_23, f"negative sum of MLP L2 - ScaSML L2, rho={rhomax}": negative_sum_23})
+        # Log t-test p-values
+        wandb.log({f"p-value GP vs SCaSML, rho={rhomax}": p_gp_scasml, f"p-value MLP vs SCaSML, rho={rhomax}": p_mlp_scasml})
         # reset stdout and stderr
         sys.stdout = self.stdout
         sys.stderr = self.stderr

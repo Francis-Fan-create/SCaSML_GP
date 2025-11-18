@@ -56,7 +56,7 @@ class ComputingBudget(object):
         self.T = equation.T
 
 
-    def test(self, save_path, budget_levels=[1, 2, 3, 4, 5], num_domain=1000, num_boundary=200):
+    def test(self, save_path, budget_levels=[1, 2, 3], num_domain=1000, num_boundary=200):
         '''
         Compares solvers under different computing budget levels.
         
@@ -67,7 +67,7 @@ class ComputingBudget(object):
         
         Parameters:
         save_path (str): The path to save the results.
-        budget_levels (list): List of budget levels (e.g., [1, 2, 3, 4, 5]).
+        budget_levels (list): List of budget levels (e.g., [1, 2, 3]).
         num_domain (int): The number of points in the test domain.
         num_boundary (int): The number of points on the test boundary.
         '''
@@ -203,6 +203,49 @@ class ComputingBudget(object):
             print(f"  MLP relative L2 error: {rel_error_mlp:.6e}")
             print(f"  SCaSML relative L2 error: {rel_error_scasml:.6e}")
             
+            # ==========================================
+            # Statistical Analysis (compute before storing)
+            # ==========================================
+            # Calculate statistics
+            gp_mean = np.mean(errors_gp) if len(errors_gp) > 0 else float('nan')
+            gp_std = np.std(errors_gp) if len(errors_gp) > 0 else float('nan')
+            mlp_mean = np.mean(errors_mlp) if len(errors_mlp) > 0 else float('nan')
+            mlp_std = np.std(errors_mlp) if len(errors_mlp) > 0 else float('nan')
+            scasml_mean = np.mean(errors_scasml) if len(errors_scasml) > 0 else float('nan')
+            scasml_std = np.std(errors_scasml) if len(errors_scasml) > 0 else float('nan')
+
+            # Confidence intervals
+            def compute_ci_95(errors):
+                n = len(errors)
+                if n == 0:
+                    return float('nan'), float('nan')
+                mean = np.mean(errors)
+                std = np.std(errors)
+                ci = 1.96 * std / np.sqrt(n)
+                return mean - ci, mean + ci
+
+            ci_lower_gp, ci_upper_gp = compute_ci_95(errors_gp)
+            ci_lower_mlp, ci_upper_mlp = compute_ci_95(errors_mlp)
+            ci_lower_scasml, ci_upper_scasml = compute_ci_95(errors_scasml)
+
+            # Paired t-tests (safe guard if arrays are too small)
+            try:
+                t_gp_scasml, p_gp_scasml = stats.ttest_rel(errors_gp, errors_scasml)
+            except Exception:
+                t_gp_scasml, p_gp_scasml = float('nan'), float('nan')
+            try:
+                t_mlp_scasml, p_mlp_scasml = stats.ttest_rel(errors_mlp, errors_scasml)
+            except Exception:
+                t_mlp_scasml, p_mlp_scasml = float('nan'), float('nan')
+
+            # Improvement percentages (guard divide-by-zero)
+            improvement_gp = (rel_error_gp - rel_error_scasml) / rel_error_gp * 100 if rel_error_gp != 0 else float('nan')
+            improvement_mlp = (rel_error_mlp - rel_error_scasml) / rel_error_mlp * 100 if rel_error_mlp != 0 else float('nan')
+
+            print(f"\nStatistical Analysis:")
+            print(f"  GP improvement: {improvement_gp:+.2f}% (p-value: {p_gp_scasml:.4f})")
+            print(f"  MLP improvement: {improvement_mlp:+.2f}% (p-value: {p_mlp_scasml:.4f})")
+
             # Store results
             gp_errors.append(rel_error_gp)
             mlp_errors.append(rel_error_mlp)
@@ -223,40 +266,7 @@ class ComputingBudget(object):
             scasml_ci_lower_list.append(ci_lower_scasml)
             scasml_ci_upper_list.append(ci_upper_scasml)
             
-            # ==========================================
-            # Statistical Analysis
-            # ==========================================
-            # Calculate statistics
-            gp_mean = np.mean(errors_gp)
-            gp_std = np.std(errors_gp)
-            mlp_mean = np.mean(errors_mlp)
-            mlp_std = np.std(errors_mlp)
-            scasml_mean = np.mean(errors_scasml)
-            scasml_std = np.std(errors_scasml)
-            
-            # Confidence intervals
-            def compute_ci_95(errors):
-                mean = np.mean(errors)
-                std = np.std(errors)
-                n = len(errors)
-                ci = 1.96 * std / np.sqrt(n)
-                return mean - ci, mean + ci
-            
-            ci_lower_gp, ci_upper_gp = compute_ci_95(errors_gp)
-            ci_lower_mlp, ci_upper_mlp = compute_ci_95(errors_mlp)
-            ci_lower_scasml, ci_upper_scasml = compute_ci_95(errors_scasml)
-            
-            # Paired t-tests
-            t_gp_scasml, p_gp_scasml = stats.ttest_rel(errors_gp, errors_scasml)
-            t_mlp_scasml, p_mlp_scasml = stats.ttest_rel(errors_mlp, errors_scasml)
-            
-            # Improvement percentages
-            improvement_gp = (rel_error_gp - rel_error_scasml) / rel_error_gp * 100
-            improvement_mlp = (rel_error_mlp - rel_error_scasml) / rel_error_mlp * 100
-            
-            print(f"\nStatistical Analysis:")
-            print(f"  GP improvement: {improvement_gp:+.2f}% (p-value: {p_gp_scasml:.4f})")
-            print(f"  MLP improvement: {improvement_mlp:+.2f}% (p-value: {p_mlp_scasml:.4f})")
+            # (Statistical analysis already computed and stored above)
             
             # Log to wandb
             wandb.log({
@@ -363,7 +373,7 @@ class ComputingBudget(object):
         ax.set_xlabel('Computing Budget (×baseline)', labelpad=3)
         ax.set_ylabel('Improvement (%)', labelpad=3)
         ax.set_xticks(x)
-        ax.set_xticklabels([f'{b}×' for b in budget_array])
+        ax.set_xticklabels([f'{b}×' for b in budget_array], rotation=45, ha='right')
         ax.axhline(y=0, color='black', linestyle='-', linewidth=0.8)
         ax.legend(frameon=False, loc='upper left')
         ax.grid(True, which='major', axis='y', linestyle='--', 

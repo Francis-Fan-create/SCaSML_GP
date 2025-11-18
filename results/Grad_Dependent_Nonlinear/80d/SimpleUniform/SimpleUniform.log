@@ -1,6 +1,6 @@
-Total time for GP: 1.6457440853118896 seconds
-Total time for MLP: 43.74479937553406 seconds
-Total time for ScaSML: 352.2093069553375 seconds
+Total time for GP: 1.8273701667785645 seconds
+Total time for MLP: 48.14535427093506 seconds
+Total time for ScaSML: 399.0675926208496 seconds
 GP rel L2, rho=2-> 0.2660062269849448
 MLP rel L2, rho=2-> 0.27088240921954576
 ScaSML rel L2, rho=2-> 0.16090415271646016
@@ -11,3 +11,5 @@ MLP L1, rho=2-> min: 0.0 max: 0.883056640625 mean: 0.10593973313768705 std: 0.13
 ScaSML L1, rho=2-> min: 0.0 max: 0.328125 mean: 0.08159951527913412 std: 0.058183251550636646 95% CI: [7.830749e-02, 8.489154e-02]
 GP L2 - ScaSML L2, rho=2-> positive count: 1011 negative count: 187 positive sum: 83.51470947265625 negative sum: -7.420616149902344
 MLP L2 - ScaSML L2, rho=2-> positive count: 597 negative count: 602 positive sum: 66.19864845275879 negative sum: -36.99038702249527
+Paired t-test GP vs SCaSML: t=41.4224, p-value=1.5659e-233
+Paired t-test MLP vs SCaSML: t=6.7208, p-value=2.7883e-11

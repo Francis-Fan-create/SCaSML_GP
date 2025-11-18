@@ -73,9 +73,9 @@ test2.test(r"results/Grad_Dependent_Nonlinear/80d")
 # #run the test for InferenceScaling
 # test4=InferenceScaling(equation,solver1_3,solver2,solver3_3)
 # test4.test(r"results/Grad_Dependent_Nonlinear/80d")
-#run the test for ComputingBudget
-test5=ComputingBudget(equation,solver1_4,solver2,solver3_4)
-test5.test(r"results/Grad_Dependent_Nonlinear/80d")
+# #run the test for ComputingBudget
+# test5=ComputingBudget(equation,solver1_4,solver2,solver3_4)
+# test5.test(r"results/Grad_Dependent_Nonlinear/80d")
 
 
 #finish wandb

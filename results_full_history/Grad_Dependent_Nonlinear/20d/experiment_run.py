@@ -64,9 +64,9 @@ solver3_3=ScaSML_full_history(equation=equation,GP=solver1_3) #ScaSML object
 solver3_4=ScaSML_full_history(equation=equation,GP=solver1_4) #ScaSML object
 
 
-#run the test for SimpleUniform
-test2=SimpleUniform(equation,solver1_1,solver2,solver3_1)
-test2.test(r"results_full_history/Grad_Dependent_Nonlinear/20d")
+# #run the test for SimpleUniform
+# test2=SimpleUniform(equation,solver1_1,solver2,solver3_1)
+# test2.test(r"results_full_history/Grad_Dependent_Nonlinear/20d")
 # #run the test for ConvergenceRate
 # test3=ConvergenceRate(equation,solver1_2,solver2,solver3_2)
 # test3.test(r"results_full_history/Grad_Dependent_Nonlinear/20d")
