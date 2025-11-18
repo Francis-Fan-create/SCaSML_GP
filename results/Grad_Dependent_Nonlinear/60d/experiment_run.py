@@ -10,6 +10,7 @@ from equations.equations import Grad_Dependent_Nonlinear
 from tests.SimpleUniform import SimpleUniform
 from tests.ConvergenceRate import ConvergenceRate
 from tests.InferenceScaling import InferenceScaling
+from tests.ComputingBudget import ComputingBudget
 from solvers.MLP import MLP
 from solvers.ScaSML import ScaSML
 from models.GP import GP_Grad_Dependent_Nonlinear as GP
@@ -55,10 +56,12 @@ equation=Grad_Dependent_Nonlinear(n_input=61,n_output=1)
 solver1_1=GP(equation=equation) #GP solver
 solver1_2=GP(equation=equation) #GP solver
 solver1_3=GP(equation=equation) #GP solver
+solver1_4=GP(equation=equation) #GP solver
 solver2=MLP(equation=equation) #Multilevel Picard object
 solver3_1=ScaSML(equation=equation,GP=solver1_1) #ScaSML object
 solver3_2=ScaSML(equation=equation,GP=solver1_2) #ScaSML object
 solver3_3=ScaSML(equation=equation,GP=solver1_3) #ScaSML object
+solver3_4=ScaSML(equation=equation,GP=solver1_4) #ScaSML object
 
 
 #run the test for SimpleUniform
@@ -70,6 +73,9 @@ test2.test(r"results/Grad_Dependent_Nonlinear/60d")
 # #run the test for InferenceScaling
 # test4=InferenceScaling(equation,solver1_3,solver2,solver3_3)
 # test4.test(r"results/Grad_Dependent_Nonlinear/60d")
+#run the test for ComputingBudget
+test5=ComputingBudget(equation,solver1_4,solver2,solver3_4)
+test5.test(r"results/Grad_Dependent_Nonlinear/60d")
 
 
 #finish wandb
