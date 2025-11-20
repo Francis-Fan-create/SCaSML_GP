@@ -1,15 +1,29 @@
-Total time for GP: 1.6938960552215576 seconds
-Total time for MLP: 10.123456239700317 seconds
-Total time for ScaSML: 60.691457986831665 seconds
+Total time for GP: 1.671332836151123 seconds
+Total time for MLP: 11.396852731704712 seconds
+Total time for ScaSML: 61.039945125579834 seconds
 GP rel L2, rho=2-> 0.2660062269849448
 MLP rel L2, rho=2-> 0.30218652860740314
 ScaSML rel L2, rho=2-> 0.15246485565010906
 Real Solution-> 0.6228466923322817
-PDE Loss-> min: -0.10516 max: 0.07965 mean: -0.004765 std: 0.02278
-GP L1, rho=2-> min: 0.0 max: 0.361328125 mean: 0.14501125971476236 std: 0.0801371386748623 95% CI: [1.404771e-01, 1.495454e-01]
-MLP L1, rho=2-> min: 0.0 max: 1.90625 mean: 0.10936233917872111 std: 0.15318321116296404 95% CI: [1.006952e-01, 1.180295e-01]
-ScaSML L1, rho=2-> min: 0.0003662109375 max: 0.26123046875 mean: 0.07586537043253581 std: 0.05711629271022868 95% CI: [7.263371e-02, 7.909703e-02]
+PDE Loss-> min: -0.10516357421875 max: 0.07965087890625 mean: -0.004766431748867035 std: 0.022778400914459984
+GP L1, rho=2-> min: 0.0 max: 0.361328125 mean: 0.14501125971476236 std: 0.0801371386748623 95% CI: ±4.534185e-03
+MLP L1, rho=2-> min: 0.0 max: 1.90625 mean: 0.10936233917872111 std: 0.15318321116296404 95% CI: ±8.667156e-03
+ScaSML L1, rho=2-> min: 0.0003662109375 max: 0.26123046875 mean: 0.07586537043253581 std: 0.05711629271022868 95% CI: ±3.231658e-03
+
+Statistical Significance Tests (Paired t-test):
+GP vs ScaSML: t-statistic=50.264903, p-value=1.859196e-297
+MLP vs ScaSML: t-statistic=7.768212, p-value=1.700577e-14
+GP vs MLP: t-statistic=7.359278, p-value=3.422499e-13
+
+GP L2, rho=2-> min: 0.0 max: 0.13055801391601562 mean: 0.027450226439056376 std: 0.02568269499315353 95% CI: ±1.453135e-03
+MLP L2, rho=2-> min: 0.0 max: 3.6337890625 mean: 0.035425217412838876 std: 0.15705724973568028 95% CI: ±8.886350e-03
+ScaSML L2, rho=2-> min: 1.341104507446289e-07 max: 0.06824135780334473 mean: 0.009017825323826402 std: 0.011986417337439402 95% CI: ±6.781954e-04
+
+Statistical Significance Tests for L2 (Paired t-test):
+GP vs ScaSML: t-statistic=39.490421, p-value=3.591491e-219
+MLP vs ScaSML: t-statistic=5.878179, p-value=5.370548e-09
+GP vs MLP: t-statistic=-1.757356, p-value=7.911238e-02
 GP L2 - ScaSML L2, rho=2-> positive count: 1055 negative count: 143 positive sum: 88.00028228759766 negative sum: -5.025215148925781
 MLP L2 - ScaSML L2, rho=2-> positive count: 613 negative count: 584 positive sum: 76.05437469482422 negative sum: -35.858012199401855
-Paired t-test GP vs SCaSML: t=50.2649, p-value=1.8592e-297
-Paired t-test MLP vs SCaSML: t=7.7682, p-value=1.7006e-14
+GP (L2) - ScaSML (L2), squared errors, rho=2-> positive count: 1055 negative count: 143 positive sum: 22.820030674745794 negative sum: -0.7011493364698254
+MLP (L2) - ScaSML (L2), squared errors, rho=2-> positive count: 613 negative count: 584 positive sum: 37.35227905138163 negative sum: -5.663408544566664
