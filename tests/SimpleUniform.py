@@ -1,15 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import wandb
-import torch
 import time
 import sys
 import os
 import cProfile
-import shutil
-import jax.numpy as jnp
 from matplotlib.colors import LogNorm
-import scipy
 from scipy import stats
 
 class SimpleUniform(object):
@@ -90,13 +86,6 @@ class SimpleUniform(object):
         xt_test = data_test[:, :self.dim + 1]
         exact_sol = eq.exact_solution(xt_test).astype(np.float64)
     
-        errors1 = np.zeros(num_domain)
-        errors2 = np.zeros(num_domain)
-        errors3 = np.zeros(num_domain)
-        rel_error1 = 0
-        rel_error2 = 0
-        rel_error3 = 0
-        real_sol_L2 = 0
         time1, time2, time3 = 0, 0, 0
     
         # Measure the time and predict using solver1
@@ -119,26 +108,37 @@ class SimpleUniform(object):
 
         # creating mask for valid data points
         valid_mask = ~(np.isnan(sol1) | np.isnan(sol2) | np.isnan(sol3) | np.isnan(exact_sol)).flatten()
-        
-        # only calculate errors if there are valid data points
-        if np.sum(valid_mask) == 0:
-            print("Warning: All predictions are NaN. Skipping error calculation.")
-            rel_error1 = rel_error2 = rel_error3 = float('nan')
-        else:
-            # Calculate the absolute errors
-            errors1 = np.abs(sol1.flatten()[valid_mask] - exact_sol.flatten()[valid_mask])
-            errors2 = np.abs(sol2.flatten()[valid_mask] - exact_sol.flatten()[valid_mask])
-            errors3 = np.abs(sol3.flatten()[valid_mask] - exact_sol.flatten()[valid_mask])
-            
-            # Get the valid exact solution
-            exact_sol = exact_sol.flatten()[valid_mask]
-            
-            # Calculate the relative errors
-            rel_error1 = np.linalg.norm(errors1) / np.linalg.norm(exact_sol)
-            rel_error2 = np.linalg.norm(errors2) / np.linalg.norm(exact_sol)
-            rel_error3 = np.linalg.norm(errors3) / np.linalg.norm(exact_sol)
-        real_sol_L2 = np.linalg.norm(exact_sol) / np.sqrt(exact_sol.shape[0])
-        PDE_loss = self.solver1.compute_PDE_loss(data_test[valid_mask])
+        valid_count = int(np.sum(valid_mask))
+        if valid_count == 0:
+            raise ValueError("All predictions are NaN; cannot evaluate metrics.")
+
+        # Restrict predictions and reference solution to valid entries
+        sol1_valid = sol1.flatten()[valid_mask]
+        sol2_valid = sol2.flatten()[valid_mask]
+        sol3_valid = sol3.flatten()[valid_mask]
+        exact_sol_valid = exact_sol.flatten()[valid_mask]
+
+        diff1 = sol1_valid - exact_sol_valid
+        diff2 = sol2_valid - exact_sol_valid
+        diff3 = sol3_valid - exact_sol_valid
+
+        errors1 = np.abs(diff1)
+        errors2 = np.abs(diff2)
+        errors3 = np.abs(diff3)
+
+        errors1_l2 = diff1 ** 2
+        errors2_l2 = diff2 ** 2
+        errors3_l2 = diff3 ** 2
+
+        # Calculate the relative errors
+        rel_error1 = np.linalg.norm(errors1) / np.linalg.norm(exact_sol_valid)
+        rel_error2 = np.linalg.norm(errors2) / np.linalg.norm(exact_sol_valid)
+        rel_error3 = np.linalg.norm(errors3) / np.linalg.norm(exact_sol_valid)
+
+        real_sol_L2 = np.linalg.norm(exact_sol_valid) / np.sqrt(exact_sol_valid.shape[0])
+        PDE_loss = None
+        if hasattr(self.solver1, "compute_PDE_loss"):
+            PDE_loss = self.solver1.compute_PDE_loss(data_test[valid_mask])
         #stop the profiler
         profiler.disable()
         #save the profiler results
@@ -160,6 +160,8 @@ class SimpleUniform(object):
         # compute |errors1|-|errors3|,|errrors2|-|errors3|
         errors_13 = errors1 - errors3
         errors_23 = errors2 - errors3
+        errors_l2_13 = errors1_l2 - errors3_l2
+        errors_l2_23 = errors2_l2 - errors3_l2
         
         # Calculate comparison metrics
         diff_gp = errors_13
@@ -211,8 +213,6 @@ class SimpleUniform(object):
         
         # Configure axes
         ax1.set_yscale('log')
-        # Set y-axis limits manually
-        ax1.set_ylim(1e-5, 10)  # Ensure all data is visible
         ax1.set_ylabel('Absolute Error', labelpad=2)
         ax1.set_xticks([1, 2, 3])
         ax1.set_xticklabels(['GP', 'MLP', 'SCaSML'], rotation=45, ha='right')
@@ -302,14 +302,9 @@ class SimpleUniform(object):
         # =============================================
         # Figure 4: Relative L2 Improvement Bar Plot
         # =============================================
-        # Calculate mean relative errors
-        mean_rel_error1 = np.mean(rel_error1)
-        mean_rel_error2 = np.mean(rel_error2)
-        mean_rel_error3 = np.mean(rel_error3)
-
         # Calculate improvements
-        improvement_gp = (mean_rel_error1 - mean_rel_error3) / mean_rel_error1 * 100
-        improvement_mlp = (mean_rel_error2 - mean_rel_error3) / mean_rel_error2 * 100
+        improvement_gp = (rel_error1 - rel_error3) / rel_error1 * 100
+        improvement_mlp = (rel_error2 - rel_error3) / rel_error2 * 100
 
         # Create bar plot
         fig, ax = plt.subplots(figsize=(3.5, 3))
@@ -317,7 +312,7 @@ class SimpleUniform(object):
         colors = ['#000000', '#A6A3A4', '#2C939A']
         
         # Plot bars
-        bars = ax.bar(methods, [mean_rel_error1, mean_rel_error2, mean_rel_error3], 
+        bars = ax.bar(methods, [rel_error1, rel_error2, rel_error3], 
                     color=colors, edgecolor='black')
         
         # Annotate improvements
@@ -326,13 +321,13 @@ class SimpleUniform(object):
             elif val < 0: return f"+{abs(val):.1f}%"
             else: return "0%"
         
-        ax.text(0, mean_rel_error1*1.05, format_improvement(improvement_gp),
+        ax.text(0, rel_error1*1.05, format_improvement(improvement_gp),
             ha='center', va='bottom', fontsize=7)
-        ax.text(1, mean_rel_error2*1.05, format_improvement(improvement_mlp),
+        ax.text(1, rel_error2*1.05, format_improvement(improvement_mlp),
             ha='center', va='bottom', fontsize=7)
 
         # Formatting
-        ax.set_ylabel('Mean Relative L2 Error')
+        ax.set_ylabel('Relative L2 Error')
         ax.grid(axis='y', linestyle='--', alpha=0.4)
         ax.spines[['top', 'right']].set_visible(False)
         plt.tight_layout()
@@ -414,66 +409,105 @@ class SimpleUniform(object):
         
         print("Real Solution->", real_sol_L2)
         
-        print(f"PDE Loss->", "min:", np.min(PDE_loss), "max:", np.max(PDE_loss), "mean:", np.mean(PDE_loss), "std:", np.std(PDE_loss))
+        if PDE_loss is not None:
+            PDE_loss = np.asarray(PDE_loss, dtype=np.float64)
+            print(f"PDE Loss->", "min:", np.min(PDE_loss), "max:", np.max(PDE_loss), "mean:", np.mean(PDE_loss), "std:", np.std(PDE_loss))
         
-        # Calculate confidence intervals (95%)
-        def compute_ci_95(errors):
-            mean = np.mean(errors)
-            std = np.std(errors)
-            n = len(errors)
-            # Use t-distribution for 95% CI
-            ci = 1.96 * std / np.sqrt(n)
-            return mean - ci, mean + ci
-        
-        ci_lower1, ci_upper1 = compute_ci_95(errors1)
-        ci_lower2, ci_upper2 = compute_ci_95(errors2)
-        ci_lower3, ci_upper3 = compute_ci_95(errors3)
+        # Summary statistics with 95% confidence intervals
+        gp_mean = np.mean(errors1)
+        gp_std = np.std(errors1)
+        gp_ci = 1.96 * gp_std / np.sqrt(len(errors1))
+
+        mlp_mean = np.mean(errors2)
+        mlp_std = np.std(errors2)
+        mlp_ci = 1.96 * mlp_std / np.sqrt(len(errors2))
+
+        scasml_mean = np.mean(errors3)
+        scasml_std = np.std(errors3)
+        scasml_ci = 1.96 * scasml_std / np.sqrt(len(errors3))
+
+        gp_l2_mean = np.mean(errors1_l2)
+        gp_l2_std = np.std(errors1_l2)
+        gp_l2_ci = 1.96 * gp_l2_std / np.sqrt(len(errors1_l2))
+
+        mlp_l2_mean = np.mean(errors2_l2)
+        mlp_l2_std = np.std(errors2_l2)
+        mlp_l2_ci = 1.96 * mlp_l2_std / np.sqrt(len(errors2_l2))
+
+        scasml_l2_mean = np.mean(errors3_l2)
+        scasml_l2_std = np.std(errors3_l2)
+        scasml_l2_ci = 1.96 * scasml_l2_std / np.sqrt(len(errors3_l2))
 
         # Paired t-tests: GP vs SCaSML and MLP vs SCaSML
-        try:
-            t_gp_scasml, p_gp_scasml = stats.ttest_rel(errors1, errors3)
-        except Exception:
-            t_gp_scasml, p_gp_scasml = float('nan'), float('nan')
-        try:
-            t_mlp_scasml, p_mlp_scasml = stats.ttest_rel(errors2, errors3)
-        except Exception:
-            t_mlp_scasml, p_mlp_scasml = float('nan'), float('nan')
+        t_gp_scasml, p_gp_scasml = stats.ttest_rel(errors1, errors3)
+        t_mlp_scasml, p_mlp_scasml = stats.ttest_rel(errors2, errors3)
+        t_gp_mlp, p_gp_mlp = stats.ttest_rel(errors1, errors2)
 
-        
+        # Paired t-tests for squared errors
+        t_gp_scasml_l2, p_gp_scasml_l2 = stats.ttest_rel(errors1_l2, errors3_l2)
+        t_mlp_scasml_l2, p_mlp_scasml_l2 = stats.ttest_rel(errors2_l2, errors3_l2)
+        t_gp_mlp_l2, p_gp_mlp_l2 = stats.ttest_rel(errors1_l2, errors2_l2)
 
-        print(f"GP L1, rho={rhomax}->","min:", np.min(errors1), "max:", np.max(errors1), "mean:", np.mean(errors1), "std:", np.std(errors1), "95% CI: [{:.6e}, {:.6e}]".format(ci_lower1, ci_upper1))
-        
-        
-        print(f"MLP L1, rho={rhomax}->","min:", np.min(errors2), "max:", np.max(errors2), "mean:", np.mean(errors2), "std:", np.std(errors2), "95% CI: [{:.6e}, {:.6e}]".format(ci_lower2, ci_upper2))
-        
-        
-        print(f"ScaSML L1, rho={rhomax}->","min:", np.min(errors3), "max:", np.max(errors3), "mean:", np.mean(errors3), "std:", np.std(errors3), "95% CI: [{:.6e}, {:.6e}]".format(ci_lower3, ci_upper3))
-        
-        
+        print(f"GP L1, rho={rhomax}->","min:", np.min(errors1), "max:", np.max(errors1), 
+              "mean:", gp_mean, "std:", gp_std, "95% CI:", f"±{gp_ci:.6e}")
+
+        print(f"MLP L1, rho={rhomax}->","min:", np.min(errors2), "max:", np.max(errors2), 
+              "mean:", mlp_mean, "std:", mlp_std, "95% CI:", f"±{mlp_ci:.6e}")
+
+        print(f"ScaSML L1, rho={rhomax}->","min:", np.min(errors3), "max:", np.max(errors3), 
+              "mean:", scasml_mean, "std:", scasml_std, "95% CI:", f"±{scasml_ci:.6e}")
+
+        print(f"\nStatistical Significance Tests (Paired t-test):")
+        print(f"GP vs ScaSML: t-statistic={t_gp_scasml:.6f}, p-value={p_gp_scasml:.6e}")
+        print(f"MLP vs ScaSML: t-statistic={t_mlp_scasml:.6f}, p-value={p_mlp_scasml:.6e}")
+        print(f"GP vs MLP: t-statistic={t_gp_mlp:.6f}, p-value={p_gp_mlp:.6e}")
+
+        print(f"\nGP L2, rho={rhomax}->","min:", np.min(errors1_l2), "max:", np.max(errors1_l2), 
+              "mean:", gp_l2_mean, "std:", gp_l2_std, "95% CI:", f"±{gp_l2_ci:.6e}")
+
+        print(f"MLP L2, rho={rhomax}->","min:", np.min(errors2_l2), "max:", np.max(errors2_l2), 
+              "mean:", mlp_l2_mean, "std:", mlp_l2_std, "95% CI:", f"±{mlp_l2_ci:.6e}")
+
+        print(f"ScaSML L2, rho={rhomax}->","min:", np.min(errors3_l2), "max:", np.max(errors3_l2), 
+              "mean:", scasml_l2_mean, "std:", scasml_l2_std, "95% CI:", f"±{scasml_l2_ci:.6e}")
+
+        print(f"\nStatistical Significance Tests for L2 (Paired t-test):")
+        print(f"GP vs ScaSML: t-statistic={t_gp_scasml_l2:.6f}, p-value={p_gp_scasml_l2:.6e}")
+        print(f"MLP vs ScaSML: t-statistic={t_mlp_scasml_l2:.6f}, p-value={p_mlp_scasml_l2:.6e}")
+        print(f"GP vs MLP: t-statistic={t_gp_mlp_l2:.6f}, p-value={p_gp_mlp_l2:.6e}")
+
         # Calculate the sums of positive and negative differences
         positive_sum_13 = np.sum(errors_13[errors_13 > 0])
         negative_sum_13 = np.sum(errors_13[errors_13 < 0])
         positive_sum_23 = np.sum(errors_23[errors_23 > 0])
         negative_sum_23 = np.sum(errors_23[errors_23 < 0])
+
+        positive_sum_l2_13 = np.sum(errors_l2_13[errors_l2_13 > 0])
+        negative_sum_l2_13 = np.sum(errors_l2_13[errors_l2_13 < 0])
+        positive_sum_l2_23 = np.sum(errors_l2_23[errors_l2_23 > 0])
+        negative_sum_l2_23 = np.sum(errors_l2_23[errors_l2_23 < 0])
+
         # Display the positive count, negative count, positive sum, and negative sum of the difference of the errors
         print(f'GP L2 - ScaSML L2, rho={rhomax}->','positive count:', np.sum(errors_13 > 0), 'negative count:', np.sum(errors_13 < 0), 'positive sum:', positive_sum_13, 'negative sum:', negative_sum_13)
         print(f'MLP L2 - ScaSML L2, rho={rhomax}->','positive count:', np.sum(errors_23 > 0), 'negative count:', np.sum(errors_23 < 0), 'positive sum:', positive_sum_23, 'negative sum:', negative_sum_23)
-        # Print paired t-test results
-        print(f"Paired t-test GP vs SCaSML: t={t_gp_scasml:.4f}, p-value={p_gp_scasml:.4e}")
-        print(f"Paired t-test MLP vs SCaSML: t={t_mlp_scasml:.4f}, p-value={p_mlp_scasml:.4e}")
+        print(f'GP (L2) - ScaSML (L2), squared errors, rho={rhomax}->','positive count:', np.sum(errors_l2_13 > 0), 'negative count:', np.sum(errors_l2_13 < 0), 'positive sum:', positive_sum_l2_13, 'negative sum:', negative_sum_l2_13)
+        print(f'MLP (L2) - ScaSML (L2), squared errors, rho={rhomax}->','positive count:', np.sum(errors_l2_23 > 0), 'negative count:', np.sum(errors_l2_23 < 0), 'positive sum:', positive_sum_l2_23, 'negative sum:', negative_sum_l2_23)
 
         # Log the results to wandb
-        wandb.log({f"mean of GP L2, rho={rhomax}": np.mean(errors1), f"mean of MLP L2, rho={rhomax}": np.mean(errors2), f"mean of ScaSML L2, rho={rhomax}": np.mean(errors3)})
-        wandb.log({f"std of GP L2, rho={rhomax}": np.std(errors1), f"std of MLP L2, rho={rhomax}": np.std(errors2), f"std of ScaSML L2, rho={rhomax}": np.std(errors3)})
+        wandb.log({f"mean of GP L2, rho={rhomax}": gp_mean, f"mean of MLP L2, rho={rhomax}": mlp_mean, f"mean of ScaSML L2, rho={rhomax}": scasml_mean})
+        wandb.log({f"std of GP L2, rho={rhomax}": gp_std, f"std of MLP L2, rho={rhomax}": mlp_std, f"std of ScaSML L2, rho={rhomax}": scasml_std})
         wandb.log({f"min of GP L2, rho={rhomax}": np.min(errors1), f"min of MLP L2, rho={rhomax}": np.min(errors2), f"min of ScaSML L2, rho={rhomax}": np.min(errors3)})
         wandb.log({f"max of GP L2, rho={rhomax}": np.max(errors1), f"max of MLP L2, rho={rhomax}": np.max(errors2), f"max of ScaSML L2, rho={rhomax}": np.max(errors3)})
-        wandb.log({f"95% CI lower of GP L2, rho={rhomax}": ci_lower1, f"95% CI upper of GP L2, rho={rhomax}": ci_upper1})
-        wandb.log({f"95% CI lower of MLP L2, rho={rhomax}": ci_lower2, f"95% CI upper of MLP L2, rho={rhomax}": ci_upper2})
-        wandb.log({f"95% CI lower of ScaSML L2, rho={rhomax}": ci_lower3, f"95% CI upper of ScaSML L2, rho={rhomax}": ci_upper3})
+        wandb.log({f"p-value GP vs ScaSML, rho={rhomax}": p_gp_scasml, f"p-value MLP vs ScaSML, rho={rhomax}": p_mlp_scasml, f"p-value GP vs MLP, rho={rhomax}": p_gp_mlp})
         wandb.log({f"positive count of GP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_13 > 0), f"negative count of GP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_13 < 0), f"positive sum of GP L2 - ScaSML L2, rho={rhomax}": positive_sum_13, f"negative sum of GP L2 - ScaSML L2, rho={rhomax}": negative_sum_13})
         wandb.log({f"positive count of MLP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_23 > 0), f"negative count of MLP L2 - ScaSML L2, rho={rhomax}": np.sum(errors_23 < 0), f"positive sum of MLP L2 - ScaSML L2, rho={rhomax}": positive_sum_23, f"negative sum of MLP L2 - ScaSML L2, rho={rhomax}": negative_sum_23})
-        # Log t-test p-values
-        wandb.log({f"p-value GP vs SCaSML, rho={rhomax}": p_gp_scasml, f"p-value MLP vs SCaSML, rho={rhomax}": p_mlp_scasml})
+        wandb.log({f"mean of GP squared L2, rho={rhomax}": gp_l2_mean, f"mean of MLP squared L2, rho={rhomax}": mlp_l2_mean, f"mean of ScaSML squared L2, rho={rhomax}": scasml_l2_mean})
+        wandb.log({f"std of GP squared L2, rho={rhomax}": gp_l2_std, f"std of MLP squared L2, rho={rhomax}": mlp_l2_std, f"std of ScaSML squared L2, rho={rhomax}": scasml_l2_std})
+        wandb.log({f"min of GP squared L2, rho={rhomax}": np.min(errors1_l2), f"min of MLP squared L2, rho={rhomax}": np.min(errors2_l2), f"min of ScaSML squared L2, rho={rhomax}": np.min(errors3_l2)})
+        wandb.log({f"max of GP squared L2, rho={rhomax}": np.max(errors1_l2), f"max of MLP squared L2, rho={rhomax}": np.max(errors2_l2), f"max of ScaSML squared L2, rho={rhomax}": np.max(errors3_l2)})
+        wandb.log({f"p-value GP vs ScaSML (L2), rho={rhomax}": p_gp_scasml_l2, f"p-value MLP vs ScaSML (L2), rho={rhomax}": p_mlp_scasml_l2, f"p-value GP vs MLP (L2), rho={rhomax}": p_gp_mlp_l2})
+        wandb.log({f"positive count of GP squared L2 - ScaSML squared L2, rho={rhomax}": np.sum(errors_l2_13 > 0), f"negative count of GP squared L2 - ScaSML squared L2, rho={rhomax}": np.sum(errors_l2_13 < 0), f"positive sum of GP squared L2 - ScaSML squared L2, rho={rhomax}": positive_sum_l2_13, f"negative sum of GP squared L2 - ScaSML squared L2, rho={rhomax}": negative_sum_l2_13})
+        wandb.log({f"positive count of MLP squared L2 - ScaSML squared L2, rho={rhomax}": np.sum(errors_l2_23 > 0), f"negative count of MLP squared L2 - ScaSML squared L2, rho={rhomax}": np.sum(errors_l2_23 < 0), f"positive sum of MLP squared L2 - ScaSML squared L2, rho={rhomax}": positive_sum_l2_23, f"negative sum of MLP squared L2 - ScaSML squared L2, rho={rhomax}": negative_sum_l2_23})
         # reset stdout and stderr
         sys.stdout = self.stdout
         sys.stderr = self.stderr
