@@ -8,6 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 # import the required libraries
 from equations.equations import Grad_Dependent_Nonlinear
 from tests.SimpleUniform import SimpleUniform
+from tests.RepeatedExperiment import RepeatedExperiment
 from tests.ConvergenceRate import ConvergenceRate
 from tests.InferenceScaling import InferenceScaling
 from tests.ComputingBudget import ComputingBudget
@@ -63,10 +64,13 @@ solver3_2=ScaSML_full_history(equation=equation,GP=solver1_2) #ScaSML object
 solver3_3=ScaSML_full_history(equation=equation,GP=solver1_3) #ScaSML object
 solver3_4=ScaSML_full_history(equation=equation,GP=solver1_4) #ScaSML object
 
+solver1_5=GP(equation=equation) #GP solver for RepeatedExperiment
+solver3_5=ScaSML_full_history(equation=equation,GP=solver1_5) #ScaSML object for RepeatedExperiment
 
-#run the test for SimpleUniform
-test2=SimpleUniform(equation,solver1_1,solver2,solver3_1)
-test2.test(r"results_full_history/Grad_Dependent_Nonlinear/40d")
+
+# #run the test for SimpleUniform
+# test2=SimpleUniform(equation,solver1_1,solver2,solver3_1)
+# test2.test(r"results_full_history/Grad_Dependent_Nonlinear/40d")
 # #run the test for ConvergenceRate
 # test3=ConvergenceRate(equation,solver1_2,solver2,solver3_2)
 # test3.test(r"results_full_history/Grad_Dependent_Nonlinear/40d")
@@ -76,6 +80,10 @@ test2.test(r"results_full_history/Grad_Dependent_Nonlinear/40d")
 # #run the test for ComputingBudget
 # test5=ComputingBudget(equation,solver1_4,solver2,solver3_4)
 # test5.test(r"results_full_history/Grad_Dependent_Nonlinear/40d")
+
+# run the test for RepeatedExperiment (non-overlapping index: test6)
+test6=RepeatedExperiment(equation,solver1_5,solver2,solver3_5)
+test6.test(r"results_full_history/Grad_Dependent_Nonlinear/40d")
 
 #finish wandb
 wandb.finish()
